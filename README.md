@@ -16,6 +16,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Reroll all dice or reroll one die at a time.
 - Lock dice so reroll-all preserves the strongest ideas.
 - Copy a compact plain-text prompt.
+- Copy a deterministic printable workshop handout with the seed, all six dice, and three scene-building questions.
 - Copy shareable URL hashes that restore the seed and locked dice.
 - Accessible, keyboard-friendly controls.
 
@@ -39,7 +40,7 @@ Open the local Vite URL shown in the terminal.
 
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy handout** to copy a printable workshop sheet, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
 ## Configuration
 
@@ -57,12 +58,11 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, and prompt formatting.
+Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, and workshop handout export.
 
 ## Roadmap
 
-- Shareable URL hashes for seeds and locks.
-- Printable prompt cards.
+- Workshop-friendly print layout.
 - Optional custom word-bank import/export.
 
 ## Contributing
