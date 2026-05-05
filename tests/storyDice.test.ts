@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeShareState,
   encodeShareState,
+  formatCopySource,
+  formatHandout,
   formatPrompt,
   rerollDie,
   rollDice,
@@ -58,6 +60,35 @@ describe('story dice generation', () => {
     for (const category of categories) {
       expect(prompt).toContain(`${category}: ${result.dice[category]}`);
     }
+  });
+
+  it('formats a deterministic printable workshop handout', () => {
+    const result = rollDice('paper comet');
+
+    expect(formatHandout(result, { title: 'Scene Sprint' })).toBe(`Scene Sprint
+Seed: paper comet
+
+Dice
+1. Character: ${result.dice.character}
+2. Want: ${result.dice.want}
+3. Setting: ${result.dice.setting}
+4. Obstacle: ${result.dice.obstacle}
+5. Object: ${result.dice.object}
+6. Twist: ${result.dice.twist}
+
+Workshop prompts
+1. What does the character do first to pursue the want?
+2. How does the obstacle make the setting harder to navigate?
+3. Where can the object or twist force a visible choice in the scene?`);
+
+    expect(formatHandout(result)).toContain('Story Dice Lab\nSeed: paper comet');
+  });
+
+  it('provides the handout text as a clipboard copy source for the UI', () => {
+    const result = rollDice('moonlit workshop');
+
+    expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
+    expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 
   it('round-trips a shareable seed and locked category list', () => {

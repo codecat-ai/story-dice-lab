@@ -5,6 +5,12 @@ export type StoryDiceResult = {
   dice: Record<StoryDiceCategory, string>;
 };
 
+export type CopySource = 'compact' | 'handout';
+
+export type HandoutOptions = {
+  title?: string;
+};
+
 export type ShareState = {
   seed: string;
   locked: Set<StoryDiceCategory>;
@@ -65,6 +71,31 @@ export function rerollDie(result: StoryDiceResult, category: StoryDiceCategory, 
 
 export function formatPrompt(result: StoryDiceResult): string {
   return storyDiceCategories.map((category) => `${category}: ${result.dice[category]}`).join('\n');
+}
+
+export function formatHandout(result: StoryDiceResult, options: HandoutOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab';
+  const diceLines = storyDiceCategories.map((category, index) => {
+    const label = category[0].toUpperCase() + category.slice(1);
+    return `${index + 1}. ${label}: ${result.dice[category]}`;
+  });
+
+  return [
+    title,
+    `Seed: ${result.seed}`,
+    '',
+    'Dice',
+    ...diceLines,
+    '',
+    'Workshop prompts',
+    '1. What does the character do first to pursue the want?',
+    '2. How does the obstacle make the setting harder to navigate?',
+    '3. Where can the object or twist force a visible choice in the scene?',
+  ].join('\n');
+}
+
+export function formatCopySource(result: StoryDiceResult, source: CopySource): string {
+  return source === 'handout' ? formatHandout(result) : formatPrompt(result);
 }
 
 export function encodeShareState(state: ShareState): string {

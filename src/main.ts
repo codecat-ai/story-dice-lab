@@ -1,6 +1,8 @@
 import {
   decodeShareState,
   encodeShareState,
+  formatCopySource,
+  formatHandout,
   formatPrompt,
   rerollDie,
   rollDice,
@@ -27,11 +29,12 @@ function render(): void {
         <h1>Story Dice Lab</h1>
         <p>Roll six reproducible story prompts for workshops, classrooms, tabletop sessions, or solo writing warmups.</p>
         <label class="seed-label">Seed
-          <input id="seed" value="${seed}" aria-label="Prompt seed" />
+          <input id="seed" value="${escapeHtml(seed)}" aria-label="Prompt seed" />
         </label>
         <div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
+          <button id="copy-handout" type="button">Copy handout</button>
           <button id="share" type="button">Copy share link</button>
         </div>
       </section>
@@ -40,7 +43,11 @@ function render(): void {
       </section>
       <section class="prompt-card">
         <h2>Prompt text</h2>
-        <pre>${formatPrompt(result)}</pre>
+        <pre>${escapeHtml(formatPrompt(result))}</pre>
+      </section>
+      <section class="prompt-card">
+        <h2>Workshop handout</h2>
+        <pre>${escapeHtml(formatHandout(result))}</pre>
       </section>
     </main>`;
 
@@ -53,7 +60,10 @@ function render(): void {
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatPrompt(result));
+    await navigator.clipboard?.writeText(formatCopySource(result, 'compact'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
+    await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
   });
   document.querySelector<HTMLButtonElement>('#share')?.addEventListener('click', async () => {
     syncLocationHash();
@@ -76,7 +86,7 @@ function dieCard(category: StoryDiceCategory): string {
   const checked = locked.has(category) ? 'checked' : '';
   return `<article class="die-card">
     <p class="category">${category}</p>
-    <h2>${result.dice[category]}</h2>
+    <h2>${escapeHtml(result.dice[category])}</h2>
     <div class="die-actions">
       <button type="button" data-reroll="${category}">Reroll ${category}</button>
       <label><input type="checkbox" data-lock="${category}" ${checked} /> Lock</label>
@@ -89,6 +99,19 @@ function syncLocationHash(): void {
   if (window.location.hash !== nextHash) {
     window.history.replaceState(null, '', nextHash);
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character];
+  });
 }
 
 render();
