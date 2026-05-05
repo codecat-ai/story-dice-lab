@@ -1,5 +1,8 @@
 # Story Dice Lab
 
+[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+
+
 Story Dice Lab 是一个本地优先的浏览器应用，用来生成确定性的创意写作提示。
 
 ## 问题与动机
