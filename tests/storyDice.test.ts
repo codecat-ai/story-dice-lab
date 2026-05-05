@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  decodeShareState,
+  encodeShareState,
   formatPrompt,
   rerollDie,
   rollDice,
@@ -56,5 +58,25 @@ describe('story dice generation', () => {
     for (const category of categories) {
       expect(prompt).toContain(`${category}: ${result.dice[category]}`);
     }
+  });
+
+  it('round-trips a shareable seed and locked category list', () => {
+    const state = encodeShareState({
+      seed: 'moonlit workshop',
+      locked: new Set<StoryDiceCategory>(['setting', 'object']),
+    });
+
+    expect(state).toBe('seed=moonlit+workshop&locked=object%2Csetting');
+    expect(decodeShareState(state)).toEqual({
+      seed: 'moonlit workshop',
+      locked: new Set<StoryDiceCategory>(['object', 'setting']),
+    });
+  });
+
+  it('ignores unknown locked categories when reading a shared state', () => {
+    expect(decodeShareState('seed=paper%20comet&locked=setting,theme,twist')).toEqual({
+      seed: 'paper comet',
+      locked: new Set<StoryDiceCategory>(['setting', 'twist']),
+    });
   });
 });
