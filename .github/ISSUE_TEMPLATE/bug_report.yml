@@ -1,0 +1,20 @@
+name: Bug report
+description: Report reproducible behavior that looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and expected behavior.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Please use minimal safe steps. Do not include secrets.
