@@ -1,6 +1,6 @@
 # Story Dice Lab
 
-[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+[English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
 Story Dice Lab は、決定的に再現できる創作プロンプトを振るためのローカルファーストなブラウザーアプリです。

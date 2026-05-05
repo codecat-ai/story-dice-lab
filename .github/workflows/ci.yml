@@ -21,4 +21,4 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --run
       - run: npm run build
-      - run: test -f LICENSE && test -f README.md && test -f README-zh.md && test -f README-jp.md
+      - run: test -f LICENSE && test -f README.md && test -f README-zh.md && test -f README-ja.md

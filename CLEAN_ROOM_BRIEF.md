@@ -32,7 +32,7 @@ Tests:
 Structure:
 - src/storyDice.ts, src/main.ts, src/styles.css
 - tests/storyDice.test.ts
-- README.md, README-zh.md, README-jp.md, LICENSE, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md
+- README.md, README-zh.md, README-ja.md, LICENSE, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md
 - .github workflows and templates
 
 CI: npm ci; npm run lint; npm run typecheck; npm test -- --run; npm run build. Use Node 24 actions opt-in.

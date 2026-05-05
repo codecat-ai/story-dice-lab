@@ -1,6 +1,6 @@
 # Story Dice Lab
 
-[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+[English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
 Story Dice Lab is a local-first browser app for rolling deterministic creative writing prompts.
