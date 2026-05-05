@@ -1,4 +1,12 @@
-import { formatPrompt, rerollDie, rollDice, storyDiceCategories, type StoryDiceCategory } from './storyDice';
+import {
+  decodeShareState,
+  encodeShareState,
+  formatPrompt,
+  rerollDie,
+  rollDice,
+  storyDiceCategories,
+  type StoryDiceCategory,
+} from './storyDice';
 import './styles.css';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -6,8 +14,10 @@ if (!appRoot) throw new Error('App root not found');
 const app = appRoot;
 
 let seed = 'moonlit workshop';
+const shared = decodeShareState(window.location.hash);
+seed = shared.seed;
 let result = rollDice(seed);
-const locked = new Set<StoryDiceCategory>();
+const locked = shared.locked;
 
 function render(): void {
   app.innerHTML = `
@@ -22,6 +32,7 @@ function render(): void {
         <div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
+          <button id="share" type="button">Copy share link</button>
         </div>
       </section>
       <section class="dice-grid" aria-label="Story dice results">
@@ -43,6 +54,10 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatPrompt(result));
+  });
+  document.querySelector<HTMLButtonElement>('#share')?.addEventListener('click', async () => {
+    syncLocationHash();
+    await navigator.clipboard?.writeText(window.location.href);
   });
   for (const category of storyDiceCategories) {
     document.querySelector<HTMLButtonElement>(`[data-reroll="${category}"]`)?.addEventListener('click', () => {
@@ -67,6 +82,13 @@ function dieCard(category: StoryDiceCategory): string {
       <label><input type="checkbox" data-lock="${category}" ${checked} /> Lock</label>
     </div>
   </article>`;
+}
+
+function syncLocationHash(): void {
+  const nextHash = `#${encodeShareState({ seed, locked })}`;
+  if (window.location.hash !== nextHash) {
+    window.history.replaceState(null, '', nextHash);
+  }
 }
 
 render();

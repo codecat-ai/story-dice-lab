@@ -5,6 +5,11 @@ export type StoryDiceResult = {
   dice: Record<StoryDiceCategory, string>;
 };
 
+export type ShareState = {
+  seed: string;
+  locked: Set<StoryDiceCategory>;
+};
+
 export const storyDiceCategories: StoryDiceCategory[] = [
   'character',
   'want',
@@ -60,4 +65,27 @@ export function rerollDie(result: StoryDiceResult, category: StoryDiceCategory, 
 
 export function formatPrompt(result: StoryDiceResult): string {
   return storyDiceCategories.map((category) => `${category}: ${result.dice[category]}`).join('\n');
+}
+
+export function encodeShareState(state: ShareState): string {
+  const params = new URLSearchParams();
+  params.set('seed', state.seed);
+  const locked = [...state.locked].filter(isStoryDiceCategory).sort();
+  if (locked.length > 0) params.set('locked', locked.join(','));
+  return params.toString();
+}
+
+export function decodeShareState(query: string): ShareState {
+  const params = new URLSearchParams(query.startsWith('#') || query.startsWith('?') ? query.slice(1) : query);
+  const seed = params.get('seed') ?? 'moonlit workshop';
+  const locked = new Set(
+    (params.get('locked') ?? '')
+      .split(',')
+      .filter(isStoryDiceCategory),
+  );
+  return { seed, locked };
+}
+
+function isStoryDiceCategory(value: string): value is StoryDiceCategory {
+  return storyDiceCategories.includes(value as StoryDiceCategory);
 }

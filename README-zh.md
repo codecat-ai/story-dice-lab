@@ -16,6 +16,7 @@ Story Dice Lab 是一个本地优先的浏览器应用，用来生成确定性�
 - 可一次重掷全部骰子，也可单独重掷某一个骰子。
 - 可锁定骰子，让“重掷全部”保留最有用的想法。
 - 可复制紧凑的纯文本提示。
+- 可复制可分享的 URL hash，用于恢复种子和锁定骰子。
 - 可访问、支持键盘操作的控件。
 
 ## 安装
@@ -38,7 +39,7 @@ npm run dev
 
 ## 示例
 
-使用种子 `moonlit workshop`，锁定场景，然后重掷其他骰子，直到提示适合你的场景。
+使用种子 `moonlit workshop`，锁定场景，然后重掷其他骰子，直到提示适合你的场景。点击 **Copy share link** 可保存或发送类似 `#seed=moonlit+workshop&locked=setting` 的 URL hash。
 
 ## 配置
 

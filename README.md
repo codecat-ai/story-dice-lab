@@ -16,6 +16,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Reroll all dice or reroll one die at a time.
 - Lock dice so reroll-all preserves the strongest ideas.
 - Copy a compact plain-text prompt.
+- Copy shareable URL hashes that restore the seed and locked dice.
 - Accessible, keyboard-friendly controls.
 
 ## Installation
@@ -38,7 +39,7 @@ Open the local Vite URL shown in the terminal.
 
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
 ## Configuration
 
