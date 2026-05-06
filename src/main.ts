@@ -1,13 +1,17 @@
 import {
   decodeShareState,
+  defaultWordBank,
   encodeShareState,
   formatCopySource,
   formatHandout,
   formatPrompt,
+  normalizeWordBankJson,
   rerollDie,
   rollDice,
+  serializeWordBank,
   storyDiceCategories,
   type StoryDiceCategory,
+  type StoryDiceWordBank,
 } from './storyDice';
 import './styles.css';
 
@@ -18,7 +22,10 @@ const app = appRoot;
 let seed = 'moonlit workshop';
 const shared = decodeShareState(window.location.hash);
 seed = shared.seed;
-let result = rollDice(seed);
+let currentWordBank: StoryDiceWordBank = defaultWordBank;
+let wordBankText = serializeWordBank(currentWordBank);
+let wordBankStatus = 'Using the built-in word bank.';
+let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 
 function render(): void {
@@ -45,6 +52,16 @@ function render(): void {
         <h2>Prompt text</h2>
         <pre>${escapeHtml(formatPrompt(result))}</pre>
       </section>
+      <section class="prompt-card word-bank-card">
+        <h2>Custom word bank</h2>
+        <label class="word-bank-label" for="word-bank-json">JSON word bank</label>
+        <textarea id="word-bank-json" rows="12" spellcheck="false">${escapeHtml(wordBankText)}</textarea>
+        <div class="actions">
+          <button id="import-bank" type="button">Import word bank</button>
+          <button id="export-bank" type="button">Copy/export word bank</button>
+        </div>
+        <p class="status" role="status">${escapeHtml(wordBankStatus)}</p>
+      </section>
       <section class="prompt-card">
         <h2>Workshop handout</h2>
         <pre>${escapeHtml(formatHandout(result))}</pre>
@@ -56,7 +73,7 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
     const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
-    result = rollDice(`${seed}:${Date.now()}`, preserved);
+    result = rollDice(`${seed}:${Date.now()}`, preserved, currentWordBank);
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
@@ -69,9 +86,30 @@ function render(): void {
     syncLocationHash();
     await navigator.clipboard?.writeText(window.location.href);
   });
+  document.querySelector<HTMLTextAreaElement>('#word-bank-json')?.addEventListener('input', (event) => {
+    wordBankText = (event.target as HTMLTextAreaElement).value;
+  });
+  document.querySelector<HTMLButtonElement>('#import-bank')?.addEventListener('click', () => {
+    try {
+      currentWordBank = normalizeWordBankJson(wordBankText);
+      wordBankText = serializeWordBank(currentWordBank);
+      const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
+      result = rollDice(seed, preserved, currentWordBank);
+      wordBankStatus = 'Imported custom word bank. Locked dice were preserved.';
+    } catch (error) {
+      wordBankStatus = error instanceof Error ? error.message : 'Word bank import failed.';
+    }
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#export-bank')?.addEventListener('click', async () => {
+    wordBankText = serializeWordBank(currentWordBank);
+    await navigator.clipboard?.writeText(wordBankText);
+    wordBankStatus = 'Copied normalized word bank JSON.';
+    render();
+  });
   for (const category of storyDiceCategories) {
     document.querySelector<HTMLButtonElement>(`[data-reroll="${category}"]`)?.addEventListener('click', () => {
-      result = rerollDie(result, category, `${seed}:${Date.now()}`);
+      result = rerollDie(result, category, `${seed}:${Date.now()}`, currentWordBank);
       render();
     });
     document.querySelector<HTMLInputElement>(`[data-lock="${category}"]`)?.addEventListener('change', (event) => {
