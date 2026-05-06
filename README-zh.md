@@ -18,6 +18,7 @@ Story Dice Lab 是一个本地优先的浏览器应用，用来生成确定性�
 - 可复制紧凑的纯文本提示。
 - 可复制确定性的可打印工作坊讲义，包含种子、六类骰子和三个场景构思问题。
 - 可复制可分享的 URL hash，用于恢复种子和锁定骰子。
+- 可导入包含六类骰子的自定义 JSON 词库，并复制/导出规范化后的 JSON。
 - 可访问、支持键盘操作的控件。
 
 ## 安装
@@ -42,9 +43,24 @@ npm run dev
 
 使用种子 `moonlit workshop`，锁定场景，然后重掷其他骰子，直到提示适合你的场景。点击 **Copy handout** 可复制可打印的工作坊讲义，或点击 **Copy share link** 保存或发送类似 `#seed=moonlit+workshop&locked=setting` 的 URL hash。
 
+若要使用自定义词库，请粘贴包含全部六类的 JSON：
+
+```json
+{
+  "character": ["curious pilot"],
+  "want": ["to find dawn"],
+  "setting": ["clock market"],
+  "obstacle": ["a locked moon"],
+  "object": ["silver key"],
+  "twist": ["the map is alive"]
+}
+```
+
+点击 **Import word bank** 验证并规范化词库。点击 **Copy/export word bank** 复制当前启用的规范化 JSON。
+
 ## 配置
 
-无需配置。应用在本地浏览器中运行，不调用远程 API。
+无需配置。应用在本地浏览器中运行，不调用远程 API。自定义词库 JSON 只在浏览器本地处理。
 
 ## 开发
 
@@ -58,12 +74,11 @@ npm run build
 
 ## 测试
 
-行为测试位于 `tests/storyDice.test.ts`，覆盖确定性结果、锁定行为、单骰重掷、提示格式化和工作坊讲义导出。
+行为测试位于 `tests/storyDice.test.ts`，覆盖确定性结果、锁定行为、单骰重掷、提示格式化、工作坊讲义导出，以及自定义词库导入/导出。
 
 ## 路线图
 
 - 适合工作坊的打印布局。
-- 可选的自定义词库导入/导出。
 
 ## 贡献
 

@@ -5,9 +5,12 @@ import {
   formatCopySource,
   formatHandout,
   formatPrompt,
+  normalizeWordBankJson,
   rerollDie,
   rollDice,
+  serializeWordBank,
   type StoryDiceCategory,
+  type StoryDiceWordBank,
 } from '../src/storyDice';
 
 const categories: StoryDiceCategory[] = [
@@ -109,5 +112,114 @@ Workshop prompts
       seed: 'paper comet',
       locked: new Set<StoryDiceCategory>(['setting', 'twist']),
     });
+  });
+
+  it('normalizes a JSON word bank by trimming entries and removing duplicates', () => {
+    const bank = normalizeWordBankJson(`{
+      "character": [" curious pilot ", "curious pilot", "quiet baker"],
+      "want": ["to find dawn"],
+      "setting": ["clock market"],
+      "obstacle": ["a locked moon"],
+      "object": ["silver key"],
+      "twist": ["the map is alive"]
+    }`);
+
+    expect(bank).toEqual({
+      character: ['curious pilot', 'quiet baker'],
+      want: ['to find dawn'],
+      setting: ['clock market'],
+      obstacle: ['a locked moon'],
+      object: ['silver key'],
+      twist: ['the map is alive'],
+    });
+  });
+
+  it('rejects incomplete or invalid word banks with useful category errors', () => {
+    expect(() =>
+      normalizeWordBankJson({
+        character: ['curious pilot'],
+        want: ['to find dawn'],
+        setting: [],
+        obstacle: ['a locked moon'],
+        object: ['silver key'],
+      }),
+    ).toThrow(/setting must include at least one entry; twist must be an array/);
+
+    expect(() =>
+      normalizeWordBankJson({
+        character: ['curious pilot'],
+        want: ['to find dawn'],
+        setting: ['clock market'],
+        obstacle: ['a locked moon'],
+        object: ['silver key'],
+        twist: ['   '],
+      }),
+    ).toThrow(/twist must include at least one non-empty entry/);
+  });
+
+  it('serializes a normalized word bank for export', () => {
+    const bank: StoryDiceWordBank = {
+      character: ['curious pilot'],
+      want: ['to find dawn'],
+      setting: ['clock market'],
+      obstacle: ['a locked moon'],
+      object: ['silver key'],
+      twist: ['the map is alive'],
+    };
+
+    expect(serializeWordBank(bank)).toBe(`{
+  "character": [
+    "curious pilot"
+  ],
+  "want": [
+    "to find dawn"
+  ],
+  "setting": [
+    "clock market"
+  ],
+  "obstacle": [
+    "a locked moon"
+  ],
+  "object": [
+    "silver key"
+  ],
+  "twist": [
+    "the map is alive"
+  ]
+}`);
+  });
+
+  it('uses custom word-bank values in deterministic rolls without breaking locked dice', () => {
+    const customBank: StoryDiceWordBank = {
+      character: ['custom hero'],
+      want: ['custom want'],
+      setting: ['custom setting'],
+      obstacle: ['custom obstacle'],
+      object: ['custom object'],
+      twist: ['custom twist'],
+    };
+    const first = rollDice('custom seed', {}, customBank);
+    const second = rollDice('custom seed', {}, customBank);
+    const locked = rollDice(
+      'different seed',
+      {
+        character: 'locked character',
+        object: first.dice.object,
+      },
+      customBank,
+    );
+
+    expect(first).toEqual(second);
+    expect(first.dice).toEqual({
+      character: 'custom hero',
+      want: 'custom want',
+      setting: 'custom setting',
+      obstacle: 'custom obstacle',
+      object: 'custom object',
+      twist: 'custom twist',
+    });
+    expect(locked.dice.character).toBe('locked character');
+    expect(locked.dice.object).toBe('custom object');
+    expect(locked.dice.want).toBe('custom want');
   });
 });

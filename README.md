@@ -18,6 +18,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Copy a compact plain-text prompt.
 - Copy a deterministic printable workshop handout with the seed, all six dice, and three scene-building questions.
 - Copy shareable URL hashes that restore the seed and locked dice.
+- Import a custom JSON word bank for the six dice categories and copy/export the normalized JSON.
 - Accessible, keyboard-friendly controls.
 
 ## Installation
@@ -42,9 +43,24 @@ Open the local Vite URL shown in the terminal.
 
 Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy handout** to copy a printable workshop sheet, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
+To use a custom word bank, paste JSON with all six categories:
+
+```json
+{
+  "character": ["curious pilot"],
+  "want": ["to find dawn"],
+  "setting": ["clock market"],
+  "obstacle": ["a locked moon"],
+  "object": ["silver key"],
+  "twist": ["the map is alive"]
+}
+```
+
+Click **Import word bank** to validate and normalize it. Click **Copy/export word bank** to copy the active normalized JSON.
+
 ## Configuration
 
-No configuration is required. The app runs locally in the browser and does not call remote APIs.
+No configuration is required. The app runs locally in the browser and does not call remote APIs. Custom word-bank JSON is handled in the browser only.
 
 ## Development
 
@@ -58,12 +74,11 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, and workshop handout export.
+Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, workshop handout export, and custom word-bank import/export.
 
 ## Roadmap
 
 - Workshop-friendly print layout.
-- Optional custom word-bank import/export.
 
 ## Contributing
 
