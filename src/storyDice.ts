@@ -13,6 +13,18 @@ export type HandoutOptions = {
   title?: string;
 };
 
+export type PrintSheet = {
+  title: string;
+  seedLabel: string;
+  seed: string;
+  dice: { category: string; value: string }[];
+  questions: string[];
+};
+
+export type BrowserPrintTarget = {
+  print: () => void;
+};
+
 export type ShareState = {
   seed: string;
   locked: Set<StoryDiceCategory>;
@@ -37,6 +49,12 @@ const wordBank: StoryDiceWordBank = {
 };
 
 export const defaultWordBank: StoryDiceWordBank = normalizeWordBank(wordBank);
+
+const workshopQuestions = [
+  'What does the character do first to pursue the want?',
+  'How does the obstacle make the setting harder to navigate?',
+  'Where can the object or twist force a visible choice in the scene?',
+];
 
 export function hashSeed(seed: string): number {
   let hash = 2166136261;
@@ -101,14 +119,30 @@ export function formatHandout(result: StoryDiceResult, options: HandoutOptions =
     ...diceLines,
     '',
     'Workshop prompts',
-    '1. What does the character do first to pursue the want?',
-    '2. How does the obstacle make the setting harder to navigate?',
-    '3. Where can the object or twist force a visible choice in the scene?',
+    ...workshopQuestions.map((question, index) => `${index + 1}. ${question}`),
   ].join('\n');
 }
 
 export function formatCopySource(result: StoryDiceResult, source: CopySource): string {
   return source === 'handout' ? formatHandout(result) : formatPrompt(result);
+}
+
+export function formatPrintSheet(result: StoryDiceResult, options: HandoutOptions = {}): PrintSheet {
+  const title = options.title?.trim() || 'Story Dice Lab';
+  return {
+    title,
+    seedLabel: 'Seed',
+    seed: result.seed,
+    dice: storyDiceCategories.map((category) => ({
+      category: category[0].toUpperCase() + category.slice(1),
+      value: result.dice[category],
+    })),
+    questions: [...workshopQuestions],
+  };
+}
+
+export function printCurrentPrompt(target: BrowserPrintTarget): void {
+  target.print();
 }
 
 export function normalizeWordBankJson(source: unknown): StoryDiceWordBank {

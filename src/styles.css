@@ -22,3 +22,21 @@ textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; borde
 pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem; border-radius: 16px; }
 .word-bank-label { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .status { min-height: 1.5rem; color: #68410d; font-weight: 700; }
+.print-sheet { display: none; }
+
+@media print {
+  :root { color: #16120d; background: white; }
+  body { background: white; }
+  button, input, textarea, .hero, .dice-grid, .prompt-card { display: none !important; }
+  .shell { max-width: none; margin: 0; padding: 0; }
+  .print-sheet { display: block; font-size: 12pt; line-height: 1.45; }
+  .print-sheet h2 { margin: 0 0 0.35in; font-size: 26pt; }
+  .print-seed { margin: 0 0 0.25in; font-size: 13pt; }
+  .print-dice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.14in; margin-bottom: 0.3in; }
+  .print-dice article { break-inside: avoid; border: 1px solid #807467; border-radius: 6px; padding: 0.12in; }
+  .print-dice h3 { margin: 0 0 0.04in; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; }
+  .print-dice p { margin: 0; font-size: 14pt; font-weight: 700; }
+  .print-questions { break-inside: avoid; }
+  .print-questions h3 { margin: 0 0 0.1in; font-size: 16pt; }
+  .print-questions li { margin-bottom: 0.08in; }
+}

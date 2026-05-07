@@ -4,8 +4,10 @@ import {
   encodeShareState,
   formatCopySource,
   formatHandout,
+  formatPrintSheet,
   formatPrompt,
   normalizeWordBankJson,
+  printCurrentPrompt,
   rerollDie,
   rollDice,
   serializeWordBank,
@@ -42,6 +44,7 @@ function render(): void {
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
           <button id="copy-handout" type="button">Copy handout</button>
+          <button id="print-prompt" type="button">Print prompt sheet</button>
           <button id="share" type="button">Copy share link</button>
         </div>
       </section>
@@ -66,6 +69,7 @@ function render(): void {
         <h2>Workshop handout</h2>
         <pre>${escapeHtml(formatHandout(result))}</pre>
       </section>
+      ${printSheet()}
     </main>`;
 
   document.querySelector<HTMLInputElement>('#seed')?.addEventListener('input', (event) => {
@@ -81,6 +85,9 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
+  });
+  document.querySelector<HTMLButtonElement>('#print-prompt')?.addEventListener('click', () => {
+    printCurrentPrompt(window);
   });
   document.querySelector<HTMLButtonElement>('#share')?.addEventListener('click', async () => {
     syncLocationHash();
@@ -118,6 +125,24 @@ function render(): void {
       render();
     });
   }
+}
+
+function printSheet(): string {
+  const sheet = formatPrintSheet(result);
+
+  return `<section class="print-sheet" aria-label="Printable workshop prompt sheet">
+    <h2>${escapeHtml(sheet.title)}</h2>
+    <p class="print-seed"><strong>${escapeHtml(sheet.seedLabel)}:</strong> ${escapeHtml(sheet.seed)}</p>
+    <section class="print-dice" aria-label="Printable dice values">
+      ${sheet.dice.map((die) => `<article><h3>${escapeHtml(die.category)}</h3><p>${escapeHtml(die.value)}</p></article>`).join('')}
+    </section>
+    <section class="print-questions" aria-label="Workshop questions">
+      <h3>Workshop questions</h3>
+      <ol>
+        ${sheet.questions.map((question) => `<li>${escapeHtml(question)}</li>`).join('')}
+      </ol>
+    </section>
+  </section>`;
 }
 
 function dieCard(category: StoryDiceCategory): string {
