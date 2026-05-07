@@ -4,8 +4,10 @@ import {
   encodeShareState,
   formatCopySource,
   formatHandout,
+  formatPrintSheet,
   formatPrompt,
   normalizeWordBankJson,
+  printCurrentPrompt,
   rerollDie,
   rollDice,
   serializeWordBank,
@@ -92,6 +94,37 @@ Workshop prompts
 
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
+  });
+
+  it('formats a workshop-friendly print sheet with seed, dice, and questions', () => {
+    const result = rollDice('paper comet');
+
+    expect(formatPrintSheet(result)).toEqual({
+      title: 'Story Dice Lab',
+      seedLabel: 'Seed',
+      seed: 'paper comet',
+      dice: [
+        { category: 'Character', value: result.dice.character },
+        { category: 'Want', value: result.dice.want },
+        { category: 'Setting', value: result.dice.setting },
+        { category: 'Obstacle', value: result.dice.obstacle },
+        { category: 'Object', value: result.dice.object },
+        { category: 'Twist', value: result.dice.twist },
+      ],
+      questions: [
+        'What does the character do first to pursue the want?',
+        'How does the obstacle make the setting harder to navigate?',
+        'Where can the object or twist force a visible choice in the scene?',
+      ],
+    });
+  });
+
+  it('prints the current prompt through an injectable browser print helper', () => {
+    let calls = 0;
+
+    printCurrentPrompt({ print: () => calls += 1 });
+
+    expect(calls).toBe(1);
   });
 
   it('round-trips a shareable seed and locked category list', () => {
