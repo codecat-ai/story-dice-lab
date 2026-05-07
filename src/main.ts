@@ -4,6 +4,7 @@ import {
   encodeShareState,
   formatCopySource,
   formatHandout,
+  formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
   normalizeWordBankJson,
@@ -44,6 +45,7 @@ function render(): void {
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
           <button id="copy-handout" type="button">Copy handout</button>
+          <button id="copy-markdown" type="button">Copy Markdown</button>
           <button id="print-prompt" type="button">Print prompt sheet</button>
           <button id="share" type="button">Copy share link</button>
         </div>
@@ -85,6 +87,9 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
+    await navigator.clipboard?.writeText(formatMarkdownPrompt(result));
   });
   document.querySelector<HTMLButtonElement>('#print-prompt')?.addEventListener('click', () => {
     printCurrentPrompt(window);

@@ -123,6 +123,25 @@ export function formatHandout(result: StoryDiceResult, options: HandoutOptions =
   ].join('\n');
 }
 
+export function formatMarkdownPrompt(result: StoryDiceResult): string {
+  const diceLines = storyDiceCategories.map((category) => {
+    const label = category[0].toUpperCase() + category.slice(1);
+    return `- ${label}: ${escapeMarkdown(result.dice[category])}`;
+  });
+
+  return [
+    '# Story prompt',
+    '',
+    `Seed: ${result.seed}`,
+    '',
+    ...diceLines,
+    '',
+    '## Workshop questions',
+    '',
+    ...workshopQuestions.map((question, index) => `${index + 1}. ${question}`),
+  ].join('\n');
+}
+
 export function formatCopySource(result: StoryDiceResult, source: CopySource): string {
   return source === 'handout' ? formatHandout(result) : formatPrompt(result);
 }
@@ -185,6 +204,10 @@ export function decodeShareState(query: string): ShareState {
 
 function isStoryDiceCategory(value: string): value is StoryDiceCategory {
   return storyDiceCategories.includes(value as StoryDiceCategory);
+}
+
+function escapeMarkdown(value: string): string {
+  return value.replace(/[\\`*_[\]{}()#+\-.!|>]/g, '\\$&');
 }
 
 function normalizeWordBank(source: unknown): StoryDiceWordBank {
