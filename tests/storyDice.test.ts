@@ -4,6 +4,7 @@ import {
   encodeShareState,
   formatCopySource,
   formatHandout,
+  formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
   normalizeWordBankJson,
@@ -94,6 +95,37 @@ Workshop prompts
 
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
+  });
+
+  it('formats a Markdown prompt with escaped dice values and workshop questions', () => {
+    const result = {
+      seed: 'paper comet',
+      dice: {
+        character: 'keeper *of* [doors]',
+        want: 'to fix #1 promise',
+        setting: 'market_under_glass',
+        obstacle: 'a rule (hourly)',
+        object: 'brass compass: north > east',
+        twist: 'home follows them!',
+      },
+    };
+
+    expect(formatMarkdownPrompt(result)).toBe(`# Story prompt
+
+Seed: paper comet
+
+- Character: keeper \\*of\\* \\[doors\\]
+- Want: to fix \\#1 promise
+- Setting: market\\_under\\_glass
+- Obstacle: a rule \\(hourly\\)
+- Object: brass compass: north \\> east
+- Twist: home follows them\\!
+
+## Workshop questions
+
+1. What does the character do first to pursue the want?
+2. How does the obstacle make the setting harder to navigate?
+3. Where can the object or twist force a visible choice in the scene?`);
   });
 
   it('formats a workshop-friendly print sheet with seed, dice, and questions', () => {
