@@ -13,6 +13,11 @@ export type HandoutOptions = {
   title?: string;
 };
 
+export type FacilitatorAgendaOptions = {
+  title?: string;
+  totalMinutes?: number;
+};
+
 export type PrintSheet = {
   title: string;
   seedLabel: string;
@@ -54,6 +59,34 @@ const workshopQuestions = [
   'What does the character do first to pursue the want?',
   'How does the obstacle make the setting harder to navigate?',
   'Where can the object or twist force a visible choice in the scene?',
+];
+
+const agendaPhases = [
+  {
+    name: 'Warm-up',
+    minutes: 3,
+    prompt: 'Read all six dice aloud and ask everyone to choose one image that feels alive.',
+  },
+  {
+    name: 'Character choice',
+    minutes: 5,
+    prompt: 'Pair the character with the want and name the first choice they will make.',
+  },
+  {
+    name: 'Draft',
+    minutes: 10,
+    prompt: 'Write one scene in the setting while the obstacle pushes back.',
+  },
+  {
+    name: 'Share',
+    minutes: 5,
+    prompt: 'Read a favorite moment and name where the object or twist changed the scene.',
+  },
+  {
+    name: 'Reflection',
+    minutes: 2,
+    prompt: 'Capture one revision question before the next sprint.',
+  },
 ];
 
 export function hashSeed(seed: string): number {
@@ -120,6 +153,35 @@ export function formatHandout(result: StoryDiceResult, options: HandoutOptions =
     '',
     'Workshop prompts',
     ...workshopQuestions.map((question, index) => `${index + 1}. ${question}`),
+  ].join('\n');
+}
+
+export function formatFacilitatorAgenda(result: StoryDiceResult, options: FacilitatorAgendaOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab facilitator agenda';
+  const totalMinutes = options.totalMinutes ?? 25;
+  const minutes = scaleAgendaMinutes(totalMinutes);
+  const diceLines = storyDiceCategories.map((category, index) => {
+    const label = category[0].toUpperCase() + category.slice(1);
+    return `${index + 1}. ${label}: ${result.dice[category]}`;
+  });
+  const phaseLines = agendaPhases.map((phase, index) => {
+    return `${index + 1}. ${minutes[index]} min - ${phase.name}: ${phase.prompt}`;
+  });
+
+  return [
+    title,
+    `Seed: ${result.seed}`,
+    '',
+    'Dice',
+    ...diceLines,
+    '',
+    `Timed scene sprint (${totalMinutes} minutes)`,
+    ...phaseLines,
+    '',
+    'Facilitator notes',
+    `- Character/want decision: ${result.dice.character} wants ${result.dice.want}; ask what action proves that want on the page.`,
+    `- Obstacle/setting pressure: In the ${result.dice.setting}, ${result.dice.obstacle} should make the easy path harder.`,
+    `- Object/twist turn: Use ${result.dice.object} when ${result.dice.twist} needs to force a visible choice.`,
   ].join('\n');
 }
 
@@ -208,6 +270,36 @@ function isStoryDiceCategory(value: string): value is StoryDiceCategory {
 
 function escapeMarkdown(value: string): string {
   return value.replace(/[\\`*_[\]{}()#+\-.!|>]/g, '\\$&');
+}
+
+function scaleAgendaMinutes(totalMinutes: number): number[] {
+  if (!Number.isInteger(totalMinutes) || totalMinutes < agendaPhases.length) {
+    throw new Error(`Facilitator agenda totalMinutes must be at least ${agendaPhases.length} minutes`);
+  }
+
+  const baseTotal = agendaPhases.reduce((sum, phase) => sum + phase.minutes, 0);
+  const scaled = agendaPhases.map((phase) => Math.max(1, Math.round((phase.minutes / baseTotal) * totalMinutes)));
+  let difference = totalMinutes - scaled.reduce((sum, minutes) => sum + minutes, 0);
+
+  while (difference !== 0) {
+    const candidates = scaled
+      .map((minutes, index) => ({
+        index,
+        distance: minutes / agendaPhases[index].minutes - totalMinutes / baseTotal,
+      }))
+      .filter((candidate) => difference > 0 || scaled[candidate.index] > 1)
+      .sort((first, second) => {
+        const distance = difference > 0 ? first.distance - second.distance : second.distance - first.distance;
+        return distance || first.index - second.index;
+      });
+
+    const next = candidates[0]?.index;
+    if (next === undefined) break;
+    scaled[next] += difference > 0 ? 1 : -1;
+    difference += difference > 0 ? -1 : 1;
+  }
+
+  return scaled;
 }
 
 function normalizeWordBank(source: unknown): StoryDiceWordBank {

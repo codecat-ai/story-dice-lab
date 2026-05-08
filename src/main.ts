@@ -3,6 +3,7 @@ import {
   defaultWordBank,
   encodeShareState,
   formatCopySource,
+  formatFacilitatorAgenda,
   formatHandout,
   formatMarkdownPrompt,
   formatPrintSheet,
@@ -45,6 +46,7 @@ function render(): void {
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
           <button id="copy-handout" type="button">Copy handout</button>
+          <button id="copy-agenda" type="button">Copy agenda</button>
           <button id="copy-markdown" type="button">Copy Markdown</button>
           <button id="print-prompt" type="button">Print prompt sheet</button>
           <button id="share" type="button">Copy share link</button>
@@ -71,6 +73,10 @@ function render(): void {
         <h2>Workshop handout</h2>
         <pre>${escapeHtml(formatHandout(result))}</pre>
       </section>
+      <section class="prompt-card">
+        <h2>Facilitator agenda</h2>
+        <pre>${escapeHtml(formatFacilitatorAgenda(result))}</pre>
+      </section>
       ${printSheet()}
     </main>`;
 
@@ -87,6 +93,9 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-agenda')?.addEventListener('click', async () => {
+    await navigator.clipboard?.writeText(formatFacilitatorAgenda(result));
   });
   document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatMarkdownPrompt(result));

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeShareState,
   encodeShareState,
+  formatFacilitatorAgenda,
   formatCopySource,
   formatHandout,
   formatMarkdownPrompt,
@@ -88,6 +89,57 @@ Workshop prompts
 3. Where can the object or twist force a visible choice in the scene?`);
 
     expect(formatHandout(result)).toContain('Story Dice Lab\nSeed: paper comet');
+  });
+
+  it('formats a deterministic timed facilitator agenda from the current dice', () => {
+    const result = rollDice('paper comet');
+
+    expect(formatFacilitatorAgenda(result)).toBe(`Story Dice Lab facilitator agenda
+Seed: paper comet
+
+Dice
+1. Character: ${result.dice.character}
+2. Want: ${result.dice.want}
+3. Setting: ${result.dice.setting}
+4. Obstacle: ${result.dice.obstacle}
+5. Object: ${result.dice.object}
+6. Twist: ${result.dice.twist}
+
+Timed scene sprint (25 minutes)
+1. 3 min - Warm-up: Read all six dice aloud and ask everyone to choose one image that feels alive.
+2. 5 min - Character choice: Pair the character with the want and name the first choice they will make.
+3. 10 min - Draft: Write one scene in the setting while the obstacle pushes back.
+4. 5 min - Share: Read a favorite moment and name where the object or twist changed the scene.
+5. 2 min - Reflection: Capture one revision question before the next sprint.
+
+Facilitator notes
+- Character/want decision: ${result.dice.character} wants ${result.dice.want}; ask what action proves that want on the page.
+- Obstacle/setting pressure: In the ${result.dice.setting}, ${result.dice.obstacle} should make the easy path harder.
+- Object/twist turn: Use ${result.dice.object} when ${result.dice.twist} needs to force a visible choice.`);
+  });
+
+  it('scales facilitator agenda phase minutes to a custom total while summing exactly', () => {
+    const result = rollDice('paper comet');
+    const agenda = formatFacilitatorAgenda(result, {
+      title: 'Middle school scene sprint',
+      totalMinutes: 17,
+    });
+
+    expect(agenda).toContain('Middle school scene sprint\nSeed: paper comet');
+    expect(agenda).toContain('Timed scene sprint (17 minutes)');
+    expect(agenda).toContain('1. 2 min - Warm-up:');
+    expect(agenda).toContain('2. 3 min - Character choice:');
+    expect(agenda).toContain('3. 7 min - Draft:');
+    expect(agenda).toContain('4. 3 min - Share:');
+    expect(agenda).toContain('5. 2 min - Reflection:');
+  });
+
+  it('rejects facilitator agenda totals below the number of phases', () => {
+    const result = rollDice('paper comet');
+
+    expect(() => formatFacilitatorAgenda(result, { totalMinutes: 4 })).toThrow(
+      'Facilitator agenda totalMinutes must be at least 5 minutes',
+    );
   });
 
   it('provides the handout text as a clipboard copy source for the UI', () => {
