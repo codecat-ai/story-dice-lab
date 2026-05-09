@@ -27,6 +27,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Print the current prompt as a workshop-friendly browser sheet with controls hidden.
 - Copy shareable URL hashes that restore the seed and locked dice.
 - Import a custom JSON word bank for the six dice categories and copy/export the normalized JSON.
+- Save, load, and delete named local word-bank presets in browser storage for different classes, genres, or workshop groups.
 - Accessible, keyboard-friendly controls.
 
 ## Installation
@@ -74,9 +75,11 @@ To use a custom word bank, paste JSON with all six categories:
 
 Click **Import word bank** to validate and normalize it. Click **Copy/export word bank** to copy the active normalized JSON.
 
+To reuse a custom word bank later in the same browser, enter a preset name and click **Save preset**. Names are trimmed, must be non-empty, and can be reused to intentionally overwrite an existing preset. Choose a saved preset and click **Load preset** to apply it while preserving locked dice, or click **Delete preset** to remove it without changing the current word bank.
+
 ## Configuration
 
-No configuration is required. The app runs locally in the browser and does not call remote APIs. Custom word-bank JSON is handled in the browser only.
+No configuration is required. The app runs locally in the browser and does not call remote APIs. Custom word-bank JSON and named presets are handled in the browser only. Presets use versioned `localStorage`; if storage is unavailable or corrupt, the app ignores bad data safely and keeps import/export available.
 
 ## Development
 
@@ -90,11 +93,11 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, classroom revision card export and printable revision-card cut-line layout with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, and custom word-bank import/export.
+Behavior tests live in `tests/storyDice.test.ts` and `tests/wordBankPresets.test.ts`. They cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, classroom revision card export and printable revision-card cut-line layout with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, custom word-bank import/export, and local word-bank preset storage.
 
 ## Roadmap
 
-- Save named local word-bank presets in browser storage.
+- Add optional preset notes so facilitators can document age group, genre, or classroom context.
 - Add optional large-type facilitator timer display for live in-room use.
 - Add printable small-group role cards for peer critique rounds.
 

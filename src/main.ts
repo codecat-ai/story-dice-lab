@@ -27,6 +27,14 @@ import {
   type StoryDiceCategory,
   type StoryDiceWordBank,
 } from './storyDice';
+import {
+  deleteWordBankPreset,
+  formatWordBankPresetControls,
+  listWordBankPresets,
+  loadWordBankPreset,
+  saveWordBankPreset,
+  type WordBankPreset,
+} from './wordBankPresets';
 import './styles.css';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -39,6 +47,9 @@ seed = shared.seed;
 let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
+let wordBankPresetName = '';
+let selectedWordBankPresetName = '';
+let wordBankPresets: WordBankPreset[] = readWordBankPresets();
 let agendaTitle = '';
 let agendaTotalMinutes = '25';
 let revisionCardsTitle = '';
@@ -82,6 +93,10 @@ function render(): void {
           <button id="import-bank" type="button">Import word bank</button>
           <button id="export-bank" type="button">Copy/export word bank</button>
         </div>
+        ${formatWordBankPresetControls(wordBankPresets, {
+          currentName: wordBankPresetName,
+          selectedName: selectedWordBankPresetName,
+        })}
         <p class="status" role="status">${escapeHtml(wordBankStatus)}</p>
       </section>
       <section class="prompt-card">
@@ -161,6 +176,12 @@ function render(): void {
   document.querySelector<HTMLTextAreaElement>('#word-bank-json')?.addEventListener('input', (event) => {
     wordBankText = (event.target as HTMLTextAreaElement).value;
   });
+  document.querySelector<HTMLInputElement>('#preset-name')?.addEventListener('input', (event) => {
+    wordBankPresetName = (event.target as HTMLInputElement).value;
+  });
+  document.querySelector<HTMLSelectElement>('#preset-select')?.addEventListener('change', (event) => {
+    selectedWordBankPresetName = (event.target as HTMLSelectElement).value;
+  });
   document.querySelector<HTMLButtonElement>('#import-bank')?.addEventListener('click', () => {
     try {
       currentWordBank = normalizeWordBankJson(wordBankText);
@@ -177,6 +198,82 @@ function render(): void {
     wordBankText = serializeWordBank(currentWordBank);
     await copyText(wordBankText);
     wordBankStatus = 'Copied normalized word bank JSON.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#save-preset')?.addEventListener('click', () => {
+    const storage = getWordBankPresetStorage();
+    if (!storage) {
+      wordBankStatus = 'Local storage is unavailable, so the preset could not be saved.';
+      render();
+      return;
+    }
+
+    try {
+      currentWordBank = normalizeWordBankJson(wordBankText);
+      wordBankText = serializeWordBank(currentWordBank);
+    } catch (error) {
+      wordBankStatus = error instanceof Error ? error.message : 'Word bank preset save failed.';
+      render();
+      return;
+    }
+
+    const saveResult = saveWordBankPreset(storage, wordBankPresetName, currentWordBank);
+    if (saveResult.ok) {
+      selectedWordBankPresetName = saveResult.name;
+      wordBankPresetName = saveResult.name;
+      wordBankPresets = listWordBankPresets(storage);
+      const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
+      result = rollDice(seed, preserved, currentWordBank);
+      wordBankStatus = saveResult.overwritten
+        ? `Updated local preset "${saveResult.name}". Locked dice were preserved.`
+        : `Saved local preset "${saveResult.name}". Locked dice were preserved.`;
+    } else {
+      wordBankStatus = saveResult.reason;
+    }
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#load-preset')?.addEventListener('click', () => {
+    const storage = getWordBankPresetStorage();
+    if (!storage) {
+      wordBankStatus = 'Local storage is unavailable, so presets cannot be loaded.';
+      render();
+      return;
+    }
+
+    const presetName = selectedWordBankPresetName || wordBankPresets[0]?.name || '';
+    const loadResult = loadWordBankPreset(storage, presetName);
+    if (loadResult.ok) {
+      currentWordBank = loadResult.wordBank;
+      wordBankText = serializeWordBank(currentWordBank);
+      wordBankPresetName = loadResult.name;
+      selectedWordBankPresetName = loadResult.name;
+      const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
+      result = rollDice(seed, preserved, currentWordBank);
+      wordBankStatus = `Loaded local preset "${loadResult.name}". Locked dice were preserved.`;
+    } else {
+      wordBankStatus = loadResult.reason;
+      wordBankPresets = listWordBankPresets(storage);
+    }
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#delete-preset')?.addEventListener('click', () => {
+    const storage = getWordBankPresetStorage();
+    if (!storage) {
+      wordBankStatus = 'Local storage is unavailable, so the preset could not be deleted.';
+      render();
+      return;
+    }
+
+    const presetName = selectedWordBankPresetName || wordBankPresets[0]?.name || '';
+    const deleteResult = deleteWordBankPreset(storage, presetName);
+    if (deleteResult.ok) {
+      wordBankPresets = listWordBankPresets(storage);
+      selectedWordBankPresetName = wordBankPresets[0]?.name ?? '';
+      if (wordBankPresetName === deleteResult.name) wordBankPresetName = '';
+      wordBankStatus = `Deleted local preset "${deleteResult.name}". Current word bank was not changed.`;
+    } else {
+      wordBankStatus = deleteResult.reason;
+    }
     render();
   });
   for (const category of storyDiceCategories) {
@@ -291,6 +388,19 @@ function updateAgendaPreview(): void {
       result,
       normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
     );
+  }
+}
+
+function readWordBankPresets(): WordBankPreset[] {
+  const storage = getWordBankPresetStorage();
+  return storage ? listWordBankPresets(storage) : [];
+}
+
+function getWordBankPresetStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
   }
 }
 
