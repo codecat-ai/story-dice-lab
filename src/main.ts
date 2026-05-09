@@ -9,6 +9,7 @@ import {
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatSceneBeatOutline,
   normalizeFacilitatorAgendaControls,
   normalizeWordBankJson,
   printCurrentPrompt,
@@ -51,6 +52,7 @@ function render(): void {
         <div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
+          <button id="copy-outline" type="button">Copy outline</button>
           <button id="copy-handout" type="button">Copy handout</button>
           <button id="copy-markdown" type="button">Copy Markdown</button>
           <button id="print-prompt" type="button">Print prompt sheet</button>
@@ -64,6 +66,10 @@ function render(): void {
       <section class="prompt-card">
         <h2>Prompt text</h2>
         <pre>${escapeHtml(formatPrompt(result))}</pre>
+      </section>
+      <section class="prompt-card">
+        <h2>Scene beat outline</h2>
+        <pre>${escapeHtml(formatSceneBeatOutline(result))}</pre>
       </section>
       <section class="prompt-card word-bank-card">
         <h2>Custom word bank</h2>
@@ -96,6 +102,9 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'compact'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-outline')?.addEventListener('click', async () => {
+    await navigator.clipboard?.writeText(formatCopySource(result, 'outline'));
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
