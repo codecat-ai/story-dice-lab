@@ -185,6 +185,41 @@ export function formatFacilitatorAgenda(result: StoryDiceResult, options: Facili
   ].join('\n');
 }
 
+export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: string): FacilitatorAgendaOptions {
+  const normalizedTitle = title.trim();
+  const parsedMinutes = Number(totalMinutes);
+  const options: FacilitatorAgendaOptions = {
+    totalMinutes: Number.isInteger(parsedMinutes) && parsedMinutes >= agendaPhases.length ? parsedMinutes : 25,
+  };
+
+  if (normalizedTitle) {
+    options.title = normalizedTitle;
+  }
+
+  return options;
+}
+
+export function formatFacilitatorAgendaControls(options: FacilitatorAgendaOptions = {}): string {
+  const title = options.title?.trim() ?? '';
+  const totalMinutes = options.totalMinutes ?? 25;
+
+  return `<div class="agenda-controls" aria-labelledby="agenda-controls-title">
+    <h2 id="agenda-controls-title">Facilitator agenda</h2>
+    <p id="agenda-help">Set the agenda title and sprint length before copying the facilitator agenda.</p>
+    <div class="agenda-fields">
+      <div>
+        <label class="agenda-field" for="agenda-title">Agenda title</label>
+        <input id="agenda-title" value="${escapeHtml(title)}" aria-describedby="agenda-help" />
+      </div>
+      <div>
+        <label class="agenda-field" for="agenda-minutes">Total minutes</label>
+        <input id="agenda-minutes" type="number" min="${agendaPhases.length}" step="1" value="${totalMinutes}" aria-describedby="agenda-help" />
+      </div>
+    </div>
+    <button id="copy-agenda" type="button">Copy agenda</button>
+  </div>`;
+}
+
 export function formatMarkdownPrompt(result: StoryDiceResult): string {
   const diceLines = storyDiceCategories.map((category) => {
     const label = category[0].toUpperCase() + category.slice(1);
@@ -270,6 +305,19 @@ function isStoryDiceCategory(value: string): value is StoryDiceCategory {
 
 function escapeMarkdown(value: string): string {
   return value.replace(/[\\`*_[\]{}()#+\-.!|>]/g, '\\$&');
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character];
+  });
 }
 
 function scaleAgendaMinutes(totalMinutes: number): number[] {
