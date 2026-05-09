@@ -4,10 +4,12 @@ import {
   encodeShareState,
   formatFacilitatorAgenda,
   formatCopySource,
+  formatExportActionControls,
   formatHandout,
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatRevisionCards,
   formatSceneBeatOutline,
   formatFacilitatorAgendaControls,
   normalizeFacilitatorAgendaControls,
@@ -144,6 +146,55 @@ Seed: outline seed
 5. Ending hook: The choice changes what to return a borrowed name will cost next.`);
   });
 
+  it('formats deterministic revision cards using all six current dice', () => {
+    const result = {
+      seed: 'revision seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatRevisionCards(result, { title: ' Peer revision pass ' })).toBe(`Peer revision pass
+Seed: revision seed
+
+1. Character: runaway archivist
+Task: Give the character one agency-driven choice that changes how the scene unfolds.
+Question: What does the character actively decide instead of only reacting?
+
+2. Want: to return a borrowed name
+Task: Raise the stakes so failing to get what they want would cost something specific.
+Question: What becomes harder, riskier, or more personal if this want is delayed?
+
+3. Setting: abandoned clock tower
+Task: Add sensory detail from the setting that affects the action on the page.
+Question: Which sight, sound, smell, texture, or temperature changes what someone does?
+
+4. Obstacle: a deadline at sunrise
+Task: Escalate the obstacle so the next attempt cannot use the same easy plan.
+Question: How does the obstacle force a bigger risk or sharper choice?
+
+5. Object: brass compass
+Task: Make the object part of a concrete action instead of background decoration.
+Question: Who touches, uses, hides, breaks, or trades the object?
+
+6. Twist: home has been following them
+Task: Show a consequence of the twist that changes the scene's next move.
+Question: What new problem, cost, or opportunity appears because of the twist?`);
+  });
+
+  it('uses the default revision card title when a custom title is blank', () => {
+    const result = rollDice('paper comet');
+
+    expect(formatRevisionCards(result, { title: '   ' }).startsWith('Story Dice Lab revision cards\nSeed: paper comet')).toBe(
+      true,
+    );
+  });
+
   it('scales facilitator agenda phase minutes to a custom total while summing exactly', () => {
     const result = rollDice('paper comet');
     const agenda = formatFacilitatorAgenda(result, {
@@ -196,11 +247,16 @@ Seed: outline seed
     expect(controls.indexOf('id="agenda-minutes"')).toBeLessThan(controls.indexOf('id="copy-agenda"'));
   });
 
-  it('provides the handout text as a clipboard copy source for the UI', () => {
+  it('provides export actions and clipboard copy sources for the UI', () => {
     const result = rollDice('moonlit workshop');
+    const actions = formatExportActionControls();
 
+    expect(actions).toContain('<button id="copy-revision-cards" type="button">Copy revision cards</button>');
+    expect(actions.indexOf('id="copy-handout"')).toBeLessThan(actions.indexOf('id="copy-revision-cards"'));
+    expect(actions.indexOf('id="copy-revision-cards"')).toBeLessThan(actions.indexOf('id="copy-markdown"'));
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
     expect(formatCopySource(result, 'outline')).toBe(formatSceneBeatOutline(result));
+    expect(formatCopySource(result, 'revisionCards')).toBe(formatRevisionCards(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 
