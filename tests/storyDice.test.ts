@@ -9,6 +9,7 @@ import {
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatRevisionCardPrintLayout,
   formatRevisionCards,
   formatRevisionCardsControls,
   formatSceneBeatOutline,
@@ -199,6 +200,71 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     );
   });
 
+  it('formats a deterministic printable revision-card layout with cut lines', () => {
+    const result = {
+      seed: 'revision seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatRevisionCardPrintLayout(result, { title: ' Peer revision pass ' })).toEqual({
+      title: 'Peer revision pass',
+      seedLabel: 'Seed',
+      seed: 'revision seed',
+      cutLineLabel: 'Cut along dashed lines',
+      cards: [
+        {
+          number: 'Card 1 of 6',
+          category: 'Character',
+          value: 'runaway archivist',
+          task: 'Give the character one agency-driven choice that changes how the scene unfolds.',
+          question: 'What does the character actively decide instead of only reacting?',
+        },
+        {
+          number: 'Card 2 of 6',
+          category: 'Want',
+          value: 'to return a borrowed name',
+          task: 'Raise the stakes so failing to get what they want would cost something specific.',
+          question: 'What becomes harder, riskier, or more personal if this want is delayed?',
+        },
+        {
+          number: 'Card 3 of 6',
+          category: 'Setting',
+          value: 'abandoned clock tower',
+          task: 'Add sensory detail from the setting that affects the action on the page.',
+          question: 'Which sight, sound, smell, texture, or temperature changes what someone does?',
+        },
+        {
+          number: 'Card 4 of 6',
+          category: 'Obstacle',
+          value: 'a deadline at sunrise',
+          task: 'Escalate the obstacle so the next attempt cannot use the same easy plan.',
+          question: 'How does the obstacle force a bigger risk or sharper choice?',
+        },
+        {
+          number: 'Card 5 of 6',
+          category: 'Object',
+          value: 'brass compass',
+          task: 'Make the object part of a concrete action instead of background decoration.',
+          question: 'Who touches, uses, hides, breaks, or trades the object?',
+        },
+        {
+          number: 'Card 6 of 6',
+          category: 'Twist',
+          value: 'home has been following them',
+          task: "Show a consequence of the twist that changes the scene's next move.",
+          question: 'What new problem, cost, or opportunity appears because of the twist?',
+        },
+      ],
+    });
+  });
+
   it('normalizes revision card UI controls before copying', () => {
     expect(normalizeRevisionCardsControls(' Peer review pass ')).toEqual({
       title: 'Peer review pass',
@@ -220,8 +286,14 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
       '<p id="revision-card-help">Set a class, activity, or peer-review pass title before copying revision cards.</p>',
     );
     expect(controls).toContain('<button id="copy-revision-cards" type="button">Copy revision cards</button>');
+    expect(controls).toContain(
+      '<button id="print-revision-cards" type="button" aria-describedby="revision-card-help">Print revision-card layout</button>',
+    );
     expect(controls.indexOf('id="revision-card-title"')).toBeLessThan(
       controls.indexOf('id="copy-revision-cards"'),
+    );
+    expect(controls.indexOf('id="copy-revision-cards"')).toBeLessThan(
+      controls.indexOf('id="print-revision-cards"'),
     );
   });
 
