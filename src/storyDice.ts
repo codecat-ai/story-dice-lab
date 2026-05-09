@@ -254,11 +254,16 @@ export function formatExportActionControls(): string {
           <button id="copy" type="button">Copy prompt</button>
           <button id="copy-outline" type="button">Copy outline</button>
           <button id="copy-handout" type="button">Copy handout</button>
-          <button id="copy-revision-cards" type="button">Copy revision cards</button>
           <button id="copy-markdown" type="button">Copy Markdown</button>
           <button id="print-prompt" type="button">Print prompt sheet</button>
           <button id="share" type="button">Copy share link</button>
         </div>`;
+}
+
+export function normalizeRevisionCardsControls(title: string): RevisionCardsOptions {
+  const normalizedTitle = title.trim();
+
+  return normalizedTitle ? { title: normalizedTitle } : {};
 }
 
 export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: string): FacilitatorAgendaOptions {
@@ -273,6 +278,22 @@ export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: 
   }
 
   return options;
+}
+
+export function formatRevisionCardsControls(options: RevisionCardsOptions = {}): string {
+  const title = options.title?.trim() ?? '';
+
+  return `<div class="revision-card-controls" aria-labelledby="revision-card-controls-title">
+    <h2 id="revision-card-controls-title">Revision cards</h2>
+    <p id="revision-card-help">Set a class, activity, or peer-review pass title before copying revision cards.</p>
+    <div class="revision-card-fields">
+      <div>
+        <label class="revision-card-field" for="revision-card-title">Revision card title</label>
+        <input id="revision-card-title" value="${escapeHtml(title)}" aria-describedby="revision-card-help" />
+      </div>
+    </div>
+    <button id="copy-revision-cards" type="button">Copy revision cards</button>
+  </div>`;
 }
 
 export function formatFacilitatorAgendaControls(options: FacilitatorAgendaOptions = {}): string {
