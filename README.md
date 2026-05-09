@@ -17,7 +17,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Lock dice so reroll-all preserves the strongest ideas.
 - Copy a compact plain-text prompt.
 - Copy a deterministic printable workshop handout with the seed, all six dice, and three scene-building questions.
-- Copy a deterministic 25-minute facilitator agenda with timed phases and notes that connect dice categories to scene decisions.
+- Copy a deterministic facilitator agenda with editable title and total minutes, timed phases, and notes that connect dice categories to scene decisions.
 - Copy a Markdown prompt with escaped dice values and the same workshop questions.
 - Print the current prompt as a workshop-friendly browser sheet with controls hidden.
 - Copy shareable URL hashes that restore the seed and locked dice.
@@ -44,9 +44,9 @@ Open the local Vite URL shown in the terminal.
 
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy handout** to copy a printable workshop sheet, click **Copy agenda** to copy a 25-minute scene sprint agenda for a teacher or writing-group facilitator, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
-The agenda preview includes the seed, all six dice, five timed phases totaling 25 minutes, and facilitator notes that tie character/want, obstacle/setting, and object/twist into concrete scene choices.
+The agenda preview includes the seed, all six dice, five timed phases scaled to the selected total minutes, and facilitator notes that tie character/want, obstacle/setting, and object/twist into concrete scene choices.
 
 To use a custom word bank, paste JSON with all six categories:
 
@@ -79,11 +79,10 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, workshop handout export, facilitator agenda export and time scaling, Markdown prompt export, print-layout formatting, browser print triggering, and custom word-bank import/export.
+Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, workshop handout export, facilitator agenda export, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, and custom word-bank import/export.
 
 ## Roadmap
 
-- Optional facilitator agenda controls in the UI, such as custom sprint length and title.
 - Additional classroom-ready print layouts.
 
 ## Contributing

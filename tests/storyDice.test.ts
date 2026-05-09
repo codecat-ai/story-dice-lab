@@ -8,6 +8,8 @@ import {
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatFacilitatorAgendaControls,
+  normalizeFacilitatorAgendaControls,
   normalizeWordBankJson,
   printCurrentPrompt,
   rerollDie,
@@ -140,6 +142,34 @@ Facilitator notes
     expect(() => formatFacilitatorAgenda(result, { totalMinutes: 4 })).toThrow(
       'Facilitator agenda totalMinutes must be at least 5 minutes',
     );
+  });
+
+  it('normalizes facilitator agenda UI controls before copying', () => {
+    expect(normalizeFacilitatorAgendaControls(' Middle school scene sprint ', '17')).toEqual({
+      title: 'Middle school scene sprint',
+      totalMinutes: 17,
+    });
+
+    expect(normalizeFacilitatorAgendaControls('   ', '4')).toEqual({
+      totalMinutes: 25,
+    });
+  });
+
+  it('renders accessible facilitator agenda controls before the copy button', () => {
+    const controls = formatFacilitatorAgendaControls({
+      title: 'Middle school scene sprint',
+      totalMinutes: 17,
+    });
+
+    expect(controls).toContain('<label class="agenda-field" for="agenda-title">Agenda title</label>');
+    expect(controls).toContain(
+      '<input id="agenda-title" value="Middle school scene sprint" aria-describedby="agenda-help" />',
+    );
+    expect(controls).toContain('<label class="agenda-field" for="agenda-minutes">Total minutes</label>');
+    expect(controls).toContain(
+      '<input id="agenda-minutes" type="number" min="5" step="1" value="17" aria-describedby="agenda-help" />',
+    );
+    expect(controls.indexOf('id="agenda-minutes"')).toBeLessThan(controls.indexOf('id="copy-agenda"'));
   });
 
   it('provides the handout text as a clipboard copy source for the UI', () => {

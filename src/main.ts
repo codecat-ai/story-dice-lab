@@ -3,11 +3,13 @@ import {
   defaultWordBank,
   encodeShareState,
   formatCopySource,
+  formatFacilitatorAgendaControls,
   formatFacilitatorAgenda,
   formatHandout,
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  normalizeFacilitatorAgendaControls,
   normalizeWordBankJson,
   printCurrentPrompt,
   rerollDie,
@@ -29,10 +31,14 @@ seed = shared.seed;
 let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
+let agendaTitle = '';
+let agendaTotalMinutes = '25';
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 
 function render(): void {
+  const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
+
   app.innerHTML = `
     <main class="shell">
       <section class="hero">
@@ -46,11 +52,11 @@ function render(): void {
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
           <button id="copy" type="button">Copy prompt</button>
           <button id="copy-handout" type="button">Copy handout</button>
-          <button id="copy-agenda" type="button">Copy agenda</button>
           <button id="copy-markdown" type="button">Copy Markdown</button>
           <button id="print-prompt" type="button">Print prompt sheet</button>
           <button id="share" type="button">Copy share link</button>
         </div>
+        ${formatFacilitatorAgendaControls(agendaOptions)}
       </section>
       <section class="dice-grid" aria-label="Story dice results">
         ${storyDiceCategories.map((category) => dieCard(category)).join('')}
@@ -75,7 +81,7 @@ function render(): void {
       </section>
       <section class="prompt-card">
         <h2>Facilitator agenda</h2>
-        <pre>${escapeHtml(formatFacilitatorAgenda(result))}</pre>
+        <pre id="agenda-preview">${escapeHtml(formatFacilitatorAgenda(result, agendaOptions))}</pre>
       </section>
       ${printSheet()}
     </main>`;
@@ -94,8 +100,18 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
   });
+  document.querySelector<HTMLInputElement>('#agenda-title')?.addEventListener('input', (event) => {
+    agendaTitle = (event.target as HTMLInputElement).value;
+    updateAgendaPreview();
+  });
+  document.querySelector<HTMLInputElement>('#agenda-minutes')?.addEventListener('input', (event) => {
+    agendaTotalMinutes = (event.target as HTMLInputElement).value;
+    updateAgendaPreview();
+  });
   document.querySelector<HTMLButtonElement>('#copy-agenda')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatFacilitatorAgenda(result));
+    await navigator.clipboard?.writeText(
+      formatFacilitatorAgenda(result, normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes)),
+    );
   });
   document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatMarkdownPrompt(result));
@@ -175,6 +191,16 @@ function syncLocationHash(): void {
   const nextHash = `#${encodeShareState({ seed, locked })}`;
   if (window.location.hash !== nextHash) {
     window.history.replaceState(null, '', nextHash);
+  }
+}
+
+function updateAgendaPreview(): void {
+  const preview = document.querySelector<HTMLPreElement>('#agenda-preview');
+  if (preview) {
+    preview.textContent = formatFacilitatorAgenda(
+      result,
+      normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+    );
   }
 }
 
