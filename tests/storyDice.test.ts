@@ -10,9 +10,11 @@ import {
   formatPrintSheet,
   formatPrompt,
   formatRevisionCards,
+  formatRevisionCardsControls,
   formatSceneBeatOutline,
   formatFacilitatorAgendaControls,
   normalizeFacilitatorAgendaControls,
+  normalizeRevisionCardsControls,
   normalizeWordBankJson,
   printCurrentPrompt,
   rerollDie,
@@ -195,6 +197,32 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     );
   });
 
+  it('normalizes revision card UI controls before copying', () => {
+    expect(normalizeRevisionCardsControls(' Peer review pass ')).toEqual({
+      title: 'Peer review pass',
+    });
+
+    expect(normalizeRevisionCardsControls('   ')).toEqual({});
+  });
+
+  it('renders accessible revision card controls before the copy button', () => {
+    const controls = formatRevisionCardsControls({
+      title: 'Peer <review> & "notes"',
+    });
+
+    expect(controls).toContain('<label class="revision-card-field" for="revision-card-title">Revision card title</label>');
+    expect(controls).toContain(
+      '<input id="revision-card-title" value="Peer &lt;review&gt; &amp; &quot;notes&quot;" aria-describedby="revision-card-help" />',
+    );
+    expect(controls).toContain(
+      '<p id="revision-card-help">Set a class, activity, or peer-review pass title before copying revision cards.</p>',
+    );
+    expect(controls).toContain('<button id="copy-revision-cards" type="button">Copy revision cards</button>');
+    expect(controls.indexOf('id="revision-card-title"')).toBeLessThan(
+      controls.indexOf('id="copy-revision-cards"'),
+    );
+  });
+
   it('scales facilitator agenda phase minutes to a custom total while summing exactly', () => {
     const result = rollDice('paper comet');
     const agenda = formatFacilitatorAgenda(result, {
@@ -251,9 +279,8 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     const result = rollDice('moonlit workshop');
     const actions = formatExportActionControls();
 
-    expect(actions).toContain('<button id="copy-revision-cards" type="button">Copy revision cards</button>');
-    expect(actions.indexOf('id="copy-handout"')).toBeLessThan(actions.indexOf('id="copy-revision-cards"'));
-    expect(actions.indexOf('id="copy-revision-cards"')).toBeLessThan(actions.indexOf('id="copy-markdown"'));
+    expect(actions).not.toContain('id="copy-revision-cards"');
+    expect(actions.indexOf('id="copy-handout"')).toBeLessThan(actions.indexOf('id="copy-markdown"'));
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
     expect(formatCopySource(result, 'outline')).toBe(formatSceneBeatOutline(result));
     expect(formatCopySource(result, 'revisionCards')).toBe(formatRevisionCards(result));

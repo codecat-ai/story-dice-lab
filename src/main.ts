@@ -11,7 +11,10 @@ import {
   formatPrintSheet,
   formatPrompt,
   formatSceneBeatOutline,
+  formatRevisionCards,
+  formatRevisionCardsControls,
   normalizeFacilitatorAgendaControls,
+  normalizeRevisionCardsControls,
   normalizeWordBankJson,
   printCurrentPrompt,
   rerollDie,
@@ -35,11 +38,13 @@ let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
 let agendaTitle = '';
 let agendaTotalMinutes = '25';
+let revisionCardsTitle = '';
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 
 function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
+  const revisionCardsOptions = normalizeRevisionCardsControls(revisionCardsTitle);
 
   app.innerHTML = `
     <main class="shell">
@@ -51,6 +56,7 @@ function render(): void {
           <input id="seed" value="${escapeHtml(seed)}" aria-label="Prompt seed" />
         </label>
         ${formatExportActionControls()}
+        ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatFacilitatorAgendaControls(agendaOptions)}
       </section>
       <section class="dice-grid" aria-label="Story dice results">
@@ -103,7 +109,10 @@ function render(): void {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
   });
   document.querySelector<HTMLButtonElement>('#copy-revision-cards')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatCopySource(result, 'revisionCards'));
+    await navigator.clipboard?.writeText(formatRevisionCards(result, normalizeRevisionCardsControls(revisionCardsTitle)));
+  });
+  document.querySelector<HTMLInputElement>('#revision-card-title')?.addEventListener('input', (event) => {
+    revisionCardsTitle = (event.target as HTMLInputElement).value;
   });
   document.querySelector<HTMLInputElement>('#agenda-title')?.addEventListener('input', (event) => {
     agendaTitle = (event.target as HTMLInputElement).value;
