@@ -38,6 +38,20 @@ export type TimerCardPrintLayout = {
   }[];
 };
 
+export type RevisionCardPrintLayout = {
+  title: string;
+  seedLabel: string;
+  seed: string;
+  cutLineLabel: string;
+  cards: {
+    number: string;
+    category: string;
+    value: string;
+    task: string;
+    question: string;
+  }[];
+};
+
 export type PrintSheet = {
   title: string;
   seedLabel: string;
@@ -309,6 +323,21 @@ export function formatRevisionCards(result: StoryDiceResult, options: RevisionCa
   return [title, `Seed: ${result.seed}`, '', ...cards].join('\n');
 }
 
+export function formatRevisionCardPrintLayout(
+  result: StoryDiceResult,
+  options: RevisionCardsOptions = {},
+): RevisionCardPrintLayout {
+  const title = options.title?.trim() || 'Story Dice Lab revision cards';
+
+  return {
+    title,
+    seedLabel: 'Seed',
+    seed: result.seed,
+    cutLineLabel: 'Cut along dashed lines',
+    cards: revisionCardEntries(result),
+  };
+}
+
 export function formatExportActionControls(): string {
   return `<div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
@@ -354,6 +383,7 @@ export function formatRevisionCardsControls(options: RevisionCardsOptions = {}):
       </div>
     </div>
     <button id="copy-revision-cards" type="button">Copy revision cards</button>
+    <button id="print-revision-cards" type="button" aria-describedby="revision-card-help">Print revision-card layout</button>
   </div>`;
 }
 
@@ -486,6 +516,19 @@ function escapeHtml(value: string): string {
 
 function capitalizeFirst(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function revisionCardEntries(result: StoryDiceResult): RevisionCardPrintLayout['cards'] {
+  return storyDiceCategories.map((category, index) => {
+    const guidance = revisionCardGuidance[category];
+    return {
+      number: `Card ${index + 1} of ${storyDiceCategories.length}`,
+      category: category[0].toUpperCase() + category.slice(1),
+      value: result.dice[category],
+      task: guidance.task,
+      question: guidance.question,
+    };
+  });
 }
 
 function scaleAgendaMinutes(totalMinutes: number): number[] {

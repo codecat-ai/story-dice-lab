@@ -10,6 +10,7 @@ import {
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatRevisionCardPrintLayout,
   formatSceneBeatOutline,
   formatRevisionCards,
   formatRevisionCardsControls,
@@ -43,7 +44,7 @@ let agendaTotalMinutes = '25';
 let revisionCardsTitle = '';
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
-let printTarget: 'prompt' | 'timer-cards' = 'prompt';
+let printTarget: 'prompt' | 'timer-cards' | 'revision-cards' = 'prompt';
 
 function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
@@ -92,6 +93,7 @@ function render(): void {
         <pre id="agenda-preview">${escapeHtml(formatFacilitatorAgenda(result, agendaOptions))}</pre>
       </section>
       ${printSheet()}
+      ${revisionCardPrintSheet(revisionCardsOptions)}
       ${timerCardPrintSheet(agendaOptions)}
     </main>`;
 
@@ -114,6 +116,11 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-revision-cards')?.addEventListener('click', async () => {
     await copyText(formatRevisionCards(result, normalizeRevisionCardsControls(revisionCardsTitle)));
+  });
+  document.querySelector<HTMLButtonElement>('#print-revision-cards')?.addEventListener('click', () => {
+    printTarget = 'revision-cards';
+    render();
+    requestAnimationFrame(() => printCurrentPrompt(window));
   });
   document.querySelector<HTMLInputElement>('#revision-card-title')?.addEventListener('input', (event) => {
     revisionCardsTitle = (event.target as HTMLInputElement).value;
@@ -187,6 +194,7 @@ function render(): void {
 
 function setPrintTarget(): void {
   document.querySelector('.shell')?.classList.toggle('print-timer-cards', printTarget === 'timer-cards');
+  document.querySelector('.shell')?.classList.toggle('print-revision-cards', printTarget === 'revision-cards');
   document.querySelector('.shell')?.classList.toggle('print-prompt', printTarget === 'prompt');
 }
 
@@ -227,6 +235,29 @@ function timerCardPrintSheet(options = normalizeFacilitatorAgendaControls(agenda
             <p class="timer-card-duration">${escapeHtml(card.timer)}</p>
             <p><strong>Prompt:</strong> ${escapeHtml(card.prompt)}</p>
             <p><strong>Action:</strong> ${escapeHtml(card.action)}</p>
+          </article>`,
+        )
+        .join('')}
+    </section>
+  </section>`;
+}
+
+function revisionCardPrintSheet(options = normalizeRevisionCardsControls(revisionCardsTitle)): string {
+  const layout = formatRevisionCardPrintLayout(result, options);
+
+  return `<section class="revision-card-print-sheet" aria-label="Printable revision cards with cut lines">
+    <h2>${escapeHtml(layout.title)}</h2>
+    <p class="print-seed"><strong>${escapeHtml(layout.seedLabel)}:</strong> ${escapeHtml(layout.seed)}</p>
+    <p class="cut-line-note">${escapeHtml(layout.cutLineLabel)}</p>
+    <section class="revision-card-grid" aria-label="Revision cards">
+      ${layout.cards
+        .map(
+          (card) => `<article class="revision-card">
+            <p class="revision-card-meta">${escapeHtml(card.number)}</p>
+            <h3>${escapeHtml(card.category)}</h3>
+            <p class="revision-card-value">${escapeHtml(card.value)}</p>
+            <p><strong>Task:</strong> ${escapeHtml(card.task)}</p>
+            <p><strong>Question:</strong> ${escapeHtml(card.question)}</p>
           </article>`,
         )
         .join('')}

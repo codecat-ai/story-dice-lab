@@ -28,15 +28,15 @@ textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; borde
 pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem; border-radius: 16px; }
 .word-bank-label { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .status { min-height: 1.5rem; color: #68410d; font-weight: 700; }
-.print-sheet, .timer-card-print-sheet { display: none; }
+.print-sheet, .timer-card-print-sheet, .revision-card-print-sheet { display: none; }
 
 @media print {
   :root { color: #16120d; background: white; }
   body { background: white; }
   button, input, textarea, .hero, .dice-grid, .prompt-card { display: none !important; }
   .shell { max-width: none; margin: 0; padding: 0; }
-  .print-sheet, .timer-card-print-sheet { display: none; font-size: 12pt; line-height: 1.45; }
-  .print-prompt .print-sheet, .print-timer-cards .timer-card-print-sheet { display: block; }
+  .print-sheet, .timer-card-print-sheet, .revision-card-print-sheet { display: none; font-size: 12pt; line-height: 1.45; }
+  .print-prompt .print-sheet, .print-timer-cards .timer-card-print-sheet, .print-revision-cards .revision-card-print-sheet { display: block; }
   .print-sheet h2 { margin: 0 0 0.35in; font-size: 26pt; }
   .print-seed { margin: 0 0 0.25in; font-size: 13pt; }
   .print-dice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.14in; margin-bottom: 0.3in; }
@@ -55,6 +55,13 @@ pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem;
   .timer-card h3 { margin: 0; font-size: 16pt; }
   .timer-card-duration { margin: 0.05in 0 0.1in; font-size: 14pt; font-weight: 800; }
   .timer-card p { margin: 0 0 0.08in; }
+  .revision-card-print-sheet h2 { margin: 0 0 0.12in; font-size: 22pt; }
+  .revision-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; border-top: 1px dashed #4f4539; border-left: 1px dashed #4f4539; }
+  .revision-card { min-height: 2.55in; break-inside: avoid; border-right: 1px dashed #4f4539; border-bottom: 1px dashed #4f4539; padding: 0.16in; }
+  .revision-card-meta { margin: 0 0 0.06in; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
+  .revision-card h3 { margin: 0; font-size: 16pt; }
+  .revision-card-value { margin: 0.05in 0 0.1in; font-size: 14pt; font-weight: 800; }
+  .revision-card p { margin: 0 0 0.08in; }
 }
 
 @media (max-width: 640px) {
