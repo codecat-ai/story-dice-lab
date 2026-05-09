@@ -14,6 +14,7 @@ import {
   formatRevisionCards,
   formatRevisionCardsControls,
   formatTimerCards,
+  formatTimerCardPrintLayout,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
   normalizeWordBankJson,
@@ -42,13 +43,14 @@ let agendaTotalMinutes = '25';
 let revisionCardsTitle = '';
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
+let printTarget: 'prompt' | 'timer-cards' = 'prompt';
 
 function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
   const revisionCardsOptions = normalizeRevisionCardsControls(revisionCardsTitle);
 
   app.innerHTML = `
-    <main class="shell">
+    <main class="shell print-${printTarget}">
       <section class="hero">
         <p class="eyebrow">Local-first creative prompt dice</p>
         <h1>Story Dice Lab</h1>
@@ -90,6 +92,7 @@ function render(): void {
         <pre id="agenda-preview">${escapeHtml(formatFacilitatorAgenda(result, agendaOptions))}</pre>
       </section>
       ${printSheet()}
+      ${timerCardPrintSheet(agendaOptions)}
     </main>`;
 
   document.querySelector<HTMLInputElement>('#seed')?.addEventListener('input', (event) => {
@@ -131,10 +134,17 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-timer-cards')?.addEventListener('click', async () => {
     await copyText(formatTimerCards(result, normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes)));
   });
+  document.querySelector<HTMLButtonElement>('#print-timer-cards')?.addEventListener('click', () => {
+    printTarget = 'timer-cards';
+    render();
+    requestAnimationFrame(() => printCurrentPrompt(window));
+  });
   document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
     await copyText(formatMarkdownPrompt(result));
   });
   document.querySelector<HTMLButtonElement>('#print-prompt')?.addEventListener('click', () => {
+    printTarget = 'prompt';
+    setPrintTarget();
     printCurrentPrompt(window);
   });
   document.querySelector<HTMLButtonElement>('#share')?.addEventListener('click', async () => {
@@ -175,6 +185,11 @@ function render(): void {
   }
 }
 
+function setPrintTarget(): void {
+  document.querySelector('.shell')?.classList.toggle('print-timer-cards', printTarget === 'timer-cards');
+  document.querySelector('.shell')?.classList.toggle('print-prompt', printTarget === 'prompt');
+}
+
 function printSheet(): string {
   const sheet = formatPrintSheet(result);
 
@@ -189,6 +204,32 @@ function printSheet(): string {
       <ol>
         ${sheet.questions.map((question) => `<li>${escapeHtml(question)}</li>`).join('')}
       </ol>
+    </section>
+  </section>`;
+}
+
+function timerCardPrintSheet(options = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes)): string {
+  const layout = formatTimerCardPrintLayout(result, options);
+
+  return `<section class="timer-card-print-sheet" aria-label="Printable facilitator timer cards with cut lines">
+    <h2>${escapeHtml(layout.title)}</h2>
+    <p class="print-seed">
+      <strong>${escapeHtml(layout.seedLabel)}:</strong> ${escapeHtml(layout.seed)}
+      <span><strong>${escapeHtml(layout.totalLabel)}:</strong> ${layout.totalMinutes} minutes</span>
+    </p>
+    <p class="cut-line-note">${escapeHtml(layout.cutLineLabel)}</p>
+    <section class="timer-card-grid" aria-label="Timer cards">
+      ${layout.cards
+        .map(
+          (card) => `<article class="timer-card">
+            <p class="timer-card-meta">${escapeHtml(card.phase)}</p>
+            <h3>${escapeHtml(card.name)}</h3>
+            <p class="timer-card-duration">${escapeHtml(card.timer)}</p>
+            <p><strong>Prompt:</strong> ${escapeHtml(card.prompt)}</p>
+            <p><strong>Action:</strong> ${escapeHtml(card.action)}</p>
+          </article>`,
+        )
+        .join('')}
     </section>
   </section>`;
 }

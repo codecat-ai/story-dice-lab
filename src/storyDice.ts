@@ -22,6 +22,22 @@ export type FacilitatorAgendaOptions = {
   totalMinutes?: number;
 };
 
+export type TimerCardPrintLayout = {
+  title: string;
+  seedLabel: string;
+  seed: string;
+  totalLabel: string;
+  totalMinutes: number;
+  cutLineLabel: string;
+  cards: {
+    phase: string;
+    name: string;
+    timer: string;
+    prompt: string;
+    action: string;
+  }[];
+};
+
 export type PrintSheet = {
   title: string;
   seedLabel: string;
@@ -220,13 +236,7 @@ export function formatTimerCards(result: StoryDiceResult, options: FacilitatorAg
   const title = options.title?.trim() || 'Story Dice Lab timer cards';
   const totalMinutes = options.totalMinutes ?? 25;
   const minutes = scaleAgendaMinutes(totalMinutes);
-  const actionLines = [
-    'Check when the group has named one vivid image.',
-    `Check when ${result.dice.character} wants ${result.dice.want} has a visible first action.`,
-    `Check when the scene uses ${result.dice.setting} and ${result.dice.obstacle} on the page.`,
-    `Check when ${result.dice.object} or ${result.dice.twist} has changed a choice.`,
-    'Check when each writer has one next revision question.',
-  ];
+  const actionLines = timerCardActionLines(result);
   const cards = agendaPhases.flatMap((phase, index) => {
     const card = [
       `[ ] Start ${minutes[index]}-minute timer`,
@@ -239,6 +249,32 @@ export function formatTimerCards(result: StoryDiceResult, options: FacilitatorAg
   });
 
   return [title, `Seed: ${result.seed}`, `Total: ${totalMinutes} minutes`, '', ...cards].join('\n');
+}
+
+export function formatTimerCardPrintLayout(
+  result: StoryDiceResult,
+  options: FacilitatorAgendaOptions = {},
+): TimerCardPrintLayout {
+  const title = options.title?.trim() || 'Story Dice Lab timer cards';
+  const totalMinutes = options.totalMinutes ?? 25;
+  const minutes = scaleAgendaMinutes(totalMinutes);
+  const actionLines = timerCardActionLines(result);
+
+  return {
+    title,
+    seedLabel: 'Seed',
+    seed: result.seed,
+    totalLabel: 'Total',
+    totalMinutes,
+    cutLineLabel: 'Cut along dashed lines',
+    cards: agendaPhases.map((phase, index) => ({
+      phase: `Phase ${index + 1} of ${agendaPhases.length}`,
+      name: phase.name,
+      timer: `${minutes[index]}-minute timer`,
+      prompt: phase.prompt,
+      action: actionLines[index],
+    })),
+  };
 }
 
 export function formatSceneBeatOutline(result: StoryDiceResult): string {
@@ -340,6 +376,7 @@ export function formatFacilitatorAgendaControls(options: FacilitatorAgendaOption
     </div>
     <button id="copy-agenda" type="button">Copy agenda</button>
     <button id="copy-timer-cards" type="button">Copy timer cards</button>
+    <button id="print-timer-cards" type="button" aria-describedby="agenda-help">Print timer-card layout</button>
   </div>`;
 }
 
@@ -479,6 +516,16 @@ function scaleAgendaMinutes(totalMinutes: number): number[] {
   }
 
   return scaled;
+}
+
+function timerCardActionLines(result: StoryDiceResult): string[] {
+  return [
+    'Check when the group has named one vivid image.',
+    `Check when ${result.dice.character} wants ${result.dice.want} has a visible first action.`,
+    `Check when the scene uses ${result.dice.setting} and ${result.dice.obstacle} on the page.`,
+    `Check when ${result.dice.object} or ${result.dice.twist} has changed a choice.`,
+    'Check when each writer has one next revision question.',
+  ];
 }
 
 function normalizeWordBank(source: unknown): StoryDiceWordBank {
