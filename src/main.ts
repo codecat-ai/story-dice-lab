@@ -13,6 +13,7 @@ import {
   formatSceneBeatOutline,
   formatRevisionCards,
   formatRevisionCardsControls,
+  formatTimerCards,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
   normalizeWordBankJson,
@@ -100,16 +101,16 @@ function render(): void {
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatCopySource(result, 'compact'));
+    await copyText(formatCopySource(result, 'compact'));
   });
   document.querySelector<HTMLButtonElement>('#copy-outline')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatCopySource(result, 'outline'));
+    await copyText(formatCopySource(result, 'outline'));
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
+    await copyText(formatCopySource(result, 'handout'));
   });
   document.querySelector<HTMLButtonElement>('#copy-revision-cards')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatRevisionCards(result, normalizeRevisionCardsControls(revisionCardsTitle)));
+    await copyText(formatRevisionCards(result, normalizeRevisionCardsControls(revisionCardsTitle)));
   });
   document.querySelector<HTMLInputElement>('#revision-card-title')?.addEventListener('input', (event) => {
     revisionCardsTitle = (event.target as HTMLInputElement).value;
@@ -123,19 +124,22 @@ function render(): void {
     updateAgendaPreview();
   });
   document.querySelector<HTMLButtonElement>('#copy-agenda')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(
+    await copyText(
       formatFacilitatorAgenda(result, normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes)),
     );
   });
+  document.querySelector<HTMLButtonElement>('#copy-timer-cards')?.addEventListener('click', async () => {
+    await copyText(formatTimerCards(result, normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes)));
+  });
   document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
-    await navigator.clipboard?.writeText(formatMarkdownPrompt(result));
+    await copyText(formatMarkdownPrompt(result));
   });
   document.querySelector<HTMLButtonElement>('#print-prompt')?.addEventListener('click', () => {
     printCurrentPrompt(window);
   });
   document.querySelector<HTMLButtonElement>('#share')?.addEventListener('click', async () => {
     syncLocationHash();
-    await navigator.clipboard?.writeText(window.location.href);
+    await copyText(window.location.href);
   });
   document.querySelector<HTMLTextAreaElement>('#word-bank-json')?.addEventListener('input', (event) => {
     wordBankText = (event.target as HTMLTextAreaElement).value;
@@ -154,7 +158,7 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#export-bank')?.addEventListener('click', async () => {
     wordBankText = serializeWordBank(currentWordBank);
-    await navigator.clipboard?.writeText(wordBankText);
+    await copyText(wordBankText);
     wordBankStatus = 'Copied normalized word bank JSON.';
     render();
   });
@@ -216,6 +220,23 @@ function updateAgendaPreview(): void {
       normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
     );
   }
+}
+
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.append(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
 }
 
 function escapeHtml(value: string): string {

@@ -12,6 +12,7 @@ import {
   formatRevisionCards,
   formatRevisionCardsControls,
   formatSceneBeatOutline,
+  formatTimerCards,
   formatFacilitatorAgendaControls,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
@@ -239,6 +240,49 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     expect(agenda).toContain('5. 2 min - Reflection:');
   });
 
+  it('formats deterministic timer cards for each facilitator agenda phase', () => {
+    const result = {
+      seed: 'timer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatTimerCards(result, { title: ' Scene sprint timers ', totalMinutes: 17 })).toBe(`Scene sprint timers
+Seed: timer seed
+Total: 17 minutes
+
+[ ] Start 2-minute timer
+Phase 1 of 5: Warm-up
+Facilitator prompt: Read all six dice aloud and ask everyone to choose one image that feels alive.
+Action: Check when the group has named one vivid image.
+
+[ ] Start 3-minute timer
+Phase 2 of 5: Character choice
+Facilitator prompt: Pair the character with the want and name the first choice they will make.
+Action: Check when runaway archivist wants to return a borrowed name has a visible first action.
+
+[ ] Start 7-minute timer
+Phase 3 of 5: Draft
+Facilitator prompt: Write one scene in the setting while the obstacle pushes back.
+Action: Check when the scene uses abandoned clock tower and a deadline at sunrise on the page.
+
+[ ] Start 3-minute timer
+Phase 4 of 5: Share
+Facilitator prompt: Read a favorite moment and name where the object or twist changed the scene.
+Action: Check when brass compass or home has been following them has changed a choice.
+
+[ ] Start 2-minute timer
+Phase 5 of 5: Reflection
+Facilitator prompt: Capture one revision question before the next sprint.
+Action: Check when each writer has one next revision question.`);
+  });
+
   it('rejects facilitator agenda totals below the number of phases', () => {
     const result = rollDice('paper comet');
 
@@ -272,7 +316,9 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     expect(controls).toContain(
       '<input id="agenda-minutes" type="number" min="5" step="1" value="17" aria-describedby="agenda-help" />',
     );
+    expect(controls).toContain('<button id="copy-timer-cards" type="button">Copy timer cards</button>');
     expect(controls.indexOf('id="agenda-minutes"')).toBeLessThan(controls.indexOf('id="copy-agenda"'));
+    expect(controls.indexOf('id="copy-agenda"')).toBeLessThan(controls.indexOf('id="copy-timer-cards"'));
   });
 
   it('provides export actions and clipboard copy sources for the UI', () => {
@@ -284,6 +330,7 @@ Question: What new problem, cost, or opportunity appears because of the twist?`)
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
     expect(formatCopySource(result, 'outline')).toBe(formatSceneBeatOutline(result));
     expect(formatCopySource(result, 'revisionCards')).toBe(formatRevisionCards(result));
+    expect(formatCopySource(result, 'timerCards')).toBe(formatTimerCards(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 
