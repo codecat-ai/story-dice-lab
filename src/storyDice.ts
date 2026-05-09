@@ -7,7 +7,7 @@ export type StoryDiceResult = {
 
 export type StoryDiceWordBank = Record<StoryDiceCategory, string[]>;
 
-export type CopySource = 'compact' | 'handout';
+export type CopySource = 'compact' | 'handout' | 'outline';
 
 export type HandoutOptions = {
   title?: string;
@@ -185,6 +185,21 @@ export function formatFacilitatorAgenda(result: StoryDiceResult, options: Facili
   ].join('\n');
 }
 
+export function formatSceneBeatOutline(result: StoryDiceResult): string {
+  const { character, want, setting, obstacle, object, twist } = result.dice;
+
+  return [
+    'Scene beat outline',
+    `Seed: ${result.seed}`,
+    '',
+    `1. Opening image: In the ${setting}, the ${character} notices the ${object} before the scene starts moving.`,
+    `2. Desire: The ${character} wants ${want} badly enough to act now.`,
+    `3. Complication: ${capitalizeFirst(obstacle)} turns the ${setting} against that plan.`,
+    `4. Turning point: When ${twist}, the ${object} forces the ${character} to choose a new tactic.`,
+    `5. Ending hook: The choice changes what ${want} will cost next.`,
+  ].join('\n');
+}
+
 export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: string): FacilitatorAgendaOptions {
   const normalizedTitle = title.trim();
   const parsedMinutes = Number(totalMinutes);
@@ -240,7 +255,9 @@ export function formatMarkdownPrompt(result: StoryDiceResult): string {
 }
 
 export function formatCopySource(result: StoryDiceResult, source: CopySource): string {
-  return source === 'handout' ? formatHandout(result) : formatPrompt(result);
+  if (source === 'handout') return formatHandout(result);
+  if (source === 'outline') return formatSceneBeatOutline(result);
+  return formatPrompt(result);
 }
 
 export function formatPrintSheet(result: StoryDiceResult, options: HandoutOptions = {}): PrintSheet {
@@ -318,6 +335,10 @@ function escapeHtml(value: string): string {
     };
     return entities[character];
   });
+}
+
+function capitalizeFirst(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function scaleAgendaMinutes(totalMinutes: number): number[] {

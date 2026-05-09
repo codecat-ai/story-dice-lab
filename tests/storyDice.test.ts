@@ -8,6 +8,7 @@ import {
   formatMarkdownPrompt,
   formatPrintSheet,
   formatPrompt,
+  formatSceneBeatOutline,
   formatFacilitatorAgendaControls,
   normalizeFacilitatorAgendaControls,
   normalizeWordBankJson,
@@ -120,6 +121,29 @@ Facilitator notes
 - Object/twist turn: Use ${result.dice.object} when ${result.dice.twist} needs to force a visible choice.`);
   });
 
+  it('formats a deterministic five-beat scene outline using all six dice', () => {
+    const result = {
+      seed: 'outline seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatSceneBeatOutline(result)).toBe(`Scene beat outline
+Seed: outline seed
+
+1. Opening image: In the abandoned clock tower, the runaway archivist notices the brass compass before the scene starts moving.
+2. Desire: The runaway archivist wants to return a borrowed name badly enough to act now.
+3. Complication: A deadline at sunrise turns the abandoned clock tower against that plan.
+4. Turning point: When home has been following them, the brass compass forces the runaway archivist to choose a new tactic.
+5. Ending hook: The choice changes what to return a borrowed name will cost next.`);
+  });
+
   it('scales facilitator agenda phase minutes to a custom total while summing exactly', () => {
     const result = rollDice('paper comet');
     const agenda = formatFacilitatorAgenda(result, {
@@ -176,6 +200,7 @@ Facilitator notes
     const result = rollDice('moonlit workshop');
 
     expect(formatCopySource(result, 'handout')).toBe(formatHandout(result));
+    expect(formatCopySource(result, 'outline')).toBe(formatSceneBeatOutline(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 
