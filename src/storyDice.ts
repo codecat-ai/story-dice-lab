@@ -7,7 +7,7 @@ export type StoryDiceResult = {
 
 export type StoryDiceWordBank = Record<StoryDiceCategory, string[]>;
 
-export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards';
+export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards' | 'timerCards';
 
 export type HandoutOptions = {
   title?: string;
@@ -216,6 +216,31 @@ export function formatFacilitatorAgenda(result: StoryDiceResult, options: Facili
   ].join('\n');
 }
 
+export function formatTimerCards(result: StoryDiceResult, options: FacilitatorAgendaOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab timer cards';
+  const totalMinutes = options.totalMinutes ?? 25;
+  const minutes = scaleAgendaMinutes(totalMinutes);
+  const actionLines = [
+    'Check when the group has named one vivid image.',
+    `Check when ${result.dice.character} wants ${result.dice.want} has a visible first action.`,
+    `Check when the scene uses ${result.dice.setting} and ${result.dice.obstacle} on the page.`,
+    `Check when ${result.dice.object} or ${result.dice.twist} has changed a choice.`,
+    'Check when each writer has one next revision question.',
+  ];
+  const cards = agendaPhases.flatMap((phase, index) => {
+    const card = [
+      `[ ] Start ${minutes[index]}-minute timer`,
+      `Phase ${index + 1} of ${agendaPhases.length}: ${phase.name}`,
+      `Facilitator prompt: ${phase.prompt}`,
+      `Action: ${actionLines[index]}`,
+    ];
+
+    return index === agendaPhases.length - 1 ? card : [...card, ''];
+  });
+
+  return [title, `Seed: ${result.seed}`, `Total: ${totalMinutes} minutes`, '', ...cards].join('\n');
+}
+
 export function formatSceneBeatOutline(result: StoryDiceResult): string {
   const { character, want, setting, obstacle, object, twist } = result.dice;
 
@@ -314,6 +339,7 @@ export function formatFacilitatorAgendaControls(options: FacilitatorAgendaOption
       </div>
     </div>
     <button id="copy-agenda" type="button">Copy agenda</button>
+    <button id="copy-timer-cards" type="button">Copy timer cards</button>
   </div>`;
 }
 
@@ -340,6 +366,7 @@ export function formatCopySource(result: StoryDiceResult, source: CopySource): s
   if (source === 'handout') return formatHandout(result);
   if (source === 'outline') return formatSceneBeatOutline(result);
   if (source === 'revisionCards') return formatRevisionCards(result);
+  if (source === 'timerCards') return formatTimerCards(result);
   return formatPrompt(result);
 }
 
