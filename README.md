@@ -20,6 +20,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Copy a deterministic printable workshop handout with the seed, all six dice, and three scene-building questions.
 - Copy a deterministic facilitator agenda with editable title and total minutes, timed phases, and notes that connect dice categories to scene decisions.
 - Copy facilitator-friendly timer cards for each agenda phase, scaled to the same total minutes and ready for live workshop checkoffs.
+- Print facilitator timer-card layouts with dashed cut lines, using the agenda title and scaled phase minutes.
 - Copy deterministic classroom revision cards with an editable title and one card per die, each pairing the current value with a revision task and reflection question.
 - Copy a Markdown prompt with escaped dice values and the same workshop questions.
 - Print the current prompt as a workshop-friendly browser sheet with controls hidden.
@@ -47,13 +48,13 @@ Open the local Vite URL shown in the terminal.
 
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, click **Print timer-card layout** to print those phase cards with dashed cut lines, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
 The outline preview includes the seed and five beats: opening image, desire, complication, turning point, and ending hook. Together the beats reuse the character, want, setting, obstacle, object, and twist from the current roll.
 
 The agenda preview includes the seed, all six dice, five timed phases scaled to the selected total minutes, and facilitator notes that tie character/want, obstacle/setting, and object/twist into concrete scene choices.
 
-The timer cards use the same title, seed, total minutes, and scaled phase durations as the agenda. Each card includes a phase label, a concise facilitator prompt, and a checkbox/action line for running the sprint live.
+The timer cards use the same title, seed, total minutes, and scaled phase durations as the agenda. The copied cards include a phase label, a concise facilitator prompt, and a checkbox/action line for running the sprint live. The print layout turns the same deterministic card data into a two-column sheet with dashed cut lines.
 
 The revision cards include the custom title when provided, the seed, and six numbered cards. Character asks for agency, want raises stakes, setting adds sensory detail, obstacle escalates pressure, object requires concrete action, and twist follows through with consequence.
 
@@ -88,12 +89,12 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export, classroom revision card export with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, and custom word-bank import/export.
+Behavior tests live in `tests/storyDice.test.ts` and cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, classroom revision card export with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, and custom word-bank import/export.
 
 ## Roadmap
 
 - Save named local word-bank presets in browser storage.
-- Offer printable facilitator timer-card layouts with cut lines.
+- Add optional large-type facilitator timer display for live in-room use.
 - Offer printable revision-card layouts with cut lines.
 
 ## Contributing

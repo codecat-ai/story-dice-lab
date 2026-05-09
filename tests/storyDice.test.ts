@@ -12,6 +12,7 @@ import {
   formatRevisionCards,
   formatRevisionCardsControls,
   formatSceneBeatOutline,
+  formatTimerCardPrintLayout,
   formatTimerCards,
   formatFacilitatorAgendaControls,
   normalizeFacilitatorAgendaControls,
@@ -283,6 +284,66 @@ Facilitator prompt: Capture one revision question before the next sprint.
 Action: Check when each writer has one next revision question.`);
   });
 
+  it('formats a deterministic printable timer-card layout with cut lines', () => {
+    const result = {
+      seed: 'timer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatTimerCardPrintLayout(result, { title: ' Scene sprint timers ', totalMinutes: 17 })).toEqual({
+      title: 'Scene sprint timers',
+      seedLabel: 'Seed',
+      seed: 'timer seed',
+      totalLabel: 'Total',
+      totalMinutes: 17,
+      cutLineLabel: 'Cut along dashed lines',
+      cards: [
+        {
+          phase: 'Phase 1 of 5',
+          name: 'Warm-up',
+          timer: '2-minute timer',
+          prompt: 'Read all six dice aloud and ask everyone to choose one image that feels alive.',
+          action: 'Check when the group has named one vivid image.',
+        },
+        {
+          phase: 'Phase 2 of 5',
+          name: 'Character choice',
+          timer: '3-minute timer',
+          prompt: 'Pair the character with the want and name the first choice they will make.',
+          action: 'Check when runaway archivist wants to return a borrowed name has a visible first action.',
+        },
+        {
+          phase: 'Phase 3 of 5',
+          name: 'Draft',
+          timer: '7-minute timer',
+          prompt: 'Write one scene in the setting while the obstacle pushes back.',
+          action: 'Check when the scene uses abandoned clock tower and a deadline at sunrise on the page.',
+        },
+        {
+          phase: 'Phase 4 of 5',
+          name: 'Share',
+          timer: '3-minute timer',
+          prompt: 'Read a favorite moment and name where the object or twist changed the scene.',
+          action: 'Check when brass compass or home has been following them has changed a choice.',
+        },
+        {
+          phase: 'Phase 5 of 5',
+          name: 'Reflection',
+          timer: '2-minute timer',
+          prompt: 'Capture one revision question before the next sprint.',
+          action: 'Check when each writer has one next revision question.',
+        },
+      ],
+    });
+  });
+
   it('rejects facilitator agenda totals below the number of phases', () => {
     const result = rollDice('paper comet');
 
@@ -317,8 +378,12 @@ Action: Check when each writer has one next revision question.`);
       '<input id="agenda-minutes" type="number" min="5" step="1" value="17" aria-describedby="agenda-help" />',
     );
     expect(controls).toContain('<button id="copy-timer-cards" type="button">Copy timer cards</button>');
+    expect(controls).toContain(
+      '<button id="print-timer-cards" type="button" aria-describedby="agenda-help">Print timer-card layout</button>',
+    );
     expect(controls.indexOf('id="agenda-minutes"')).toBeLessThan(controls.indexOf('id="copy-agenda"'));
     expect(controls.indexOf('id="copy-agenda"')).toBeLessThan(controls.indexOf('id="copy-timer-cards"'));
+    expect(controls.indexOf('id="copy-timer-cards"')).toBeLessThan(controls.indexOf('id="print-timer-cards"'));
   });
 
   it('provides export actions and clipboard copy sources for the UI', () => {
