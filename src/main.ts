@@ -3,6 +3,7 @@ import {
   defaultWordBank,
   encodeShareState,
   formatCopySource,
+  formatExportActionControls,
   formatFacilitatorAgendaControls,
   formatFacilitatorAgenda,
   formatHandout,
@@ -49,15 +50,7 @@ function render(): void {
         <label class="seed-label">Seed
           <input id="seed" value="${escapeHtml(seed)}" aria-label="Prompt seed" />
         </label>
-        <div class="actions">
-          <button id="roll-all" type="button">Reroll all unlocked dice</button>
-          <button id="copy" type="button">Copy prompt</button>
-          <button id="copy-outline" type="button">Copy outline</button>
-          <button id="copy-handout" type="button">Copy handout</button>
-          <button id="copy-markdown" type="button">Copy Markdown</button>
-          <button id="print-prompt" type="button">Print prompt sheet</button>
-          <button id="share" type="button">Copy share link</button>
-        </div>
+        ${formatExportActionControls()}
         ${formatFacilitatorAgendaControls(agendaOptions)}
       </section>
       <section class="dice-grid" aria-label="Story dice results">
@@ -108,6 +101,9 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await navigator.clipboard?.writeText(formatCopySource(result, 'handout'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-revision-cards')?.addEventListener('click', async () => {
+    await navigator.clipboard?.writeText(formatCopySource(result, 'revisionCards'));
   });
   document.querySelector<HTMLInputElement>('#agenda-title')?.addEventListener('input', (event) => {
     agendaTitle = (event.target as HTMLInputElement).value;

@@ -7,9 +7,13 @@ export type StoryDiceResult = {
 
 export type StoryDiceWordBank = Record<StoryDiceCategory, string[]>;
 
-export type CopySource = 'compact' | 'handout' | 'outline';
+export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards';
 
 export type HandoutOptions = {
+  title?: string;
+};
+
+export type RevisionCardsOptions = {
   title?: string;
 };
 
@@ -60,6 +64,33 @@ const workshopQuestions = [
   'How does the obstacle make the setting harder to navigate?',
   'Where can the object or twist force a visible choice in the scene?',
 ];
+
+const revisionCardGuidance: Record<StoryDiceCategory, { task: string; question: string }> = {
+  character: {
+    task: 'Give the character one agency-driven choice that changes how the scene unfolds.',
+    question: 'What does the character actively decide instead of only reacting?',
+  },
+  want: {
+    task: 'Raise the stakes so failing to get what they want would cost something specific.',
+    question: 'What becomes harder, riskier, or more personal if this want is delayed?',
+  },
+  setting: {
+    task: 'Add sensory detail from the setting that affects the action on the page.',
+    question: 'Which sight, sound, smell, texture, or temperature changes what someone does?',
+  },
+  obstacle: {
+    task: 'Escalate the obstacle so the next attempt cannot use the same easy plan.',
+    question: 'How does the obstacle force a bigger risk or sharper choice?',
+  },
+  object: {
+    task: 'Make the object part of a concrete action instead of background decoration.',
+    question: 'Who touches, uses, hides, breaks, or trades the object?',
+  },
+  twist: {
+    task: "Show a consequence of the twist that changes the scene's next move.",
+    question: 'What new problem, cost, or opportunity appears because of the twist?',
+  },
+};
 
 const agendaPhases = [
   {
@@ -200,6 +231,36 @@ export function formatSceneBeatOutline(result: StoryDiceResult): string {
   ].join('\n');
 }
 
+export function formatRevisionCards(result: StoryDiceResult, options: RevisionCardsOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab revision cards';
+  const cards = storyDiceCategories.flatMap((category, index) => {
+    const label = category[0].toUpperCase() + category.slice(1);
+    const guidance = revisionCardGuidance[category];
+    const card = [
+      `${index + 1}. ${label}: ${result.dice[category]}`,
+      `Task: ${guidance.task}`,
+      `Question: ${guidance.question}`,
+    ];
+
+    return index === storyDiceCategories.length - 1 ? card : [...card, ''];
+  });
+
+  return [title, `Seed: ${result.seed}`, '', ...cards].join('\n');
+}
+
+export function formatExportActionControls(): string {
+  return `<div class="actions">
+          <button id="roll-all" type="button">Reroll all unlocked dice</button>
+          <button id="copy" type="button">Copy prompt</button>
+          <button id="copy-outline" type="button">Copy outline</button>
+          <button id="copy-handout" type="button">Copy handout</button>
+          <button id="copy-revision-cards" type="button">Copy revision cards</button>
+          <button id="copy-markdown" type="button">Copy Markdown</button>
+          <button id="print-prompt" type="button">Print prompt sheet</button>
+          <button id="share" type="button">Copy share link</button>
+        </div>`;
+}
+
 export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: string): FacilitatorAgendaOptions {
   const normalizedTitle = title.trim();
   const parsedMinutes = Number(totalMinutes);
@@ -257,6 +318,7 @@ export function formatMarkdownPrompt(result: StoryDiceResult): string {
 export function formatCopySource(result: StoryDiceResult, source: CopySource): string {
   if (source === 'handout') return formatHandout(result);
   if (source === 'outline') return formatSceneBeatOutline(result);
+  if (source === 'revisionCards') return formatRevisionCards(result);
   return formatPrompt(result);
 }
 
