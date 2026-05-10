@@ -17,12 +17,12 @@ h1 { font-size: clamp(2.4rem, 8vw, 5rem); margin: 0; }
 input, select { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; }
 textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; resize: vertical; }
 .actions, .die-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1rem; }
-.agenda-controls, .revision-card-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
-.agenda-controls h2, .revision-card-controls h2 { margin: 0; font-size: 1.25rem; }
-.agenda-controls p, .revision-card-controls p { max-width: 42rem; }
+.agenda-controls, .revision-card-controls, .peer-role-card-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
+.agenda-controls h2, .revision-card-controls h2, .peer-role-card-controls h2 { margin: 0; font-size: 1.25rem; }
+.agenda-controls p, .revision-card-controls p, .peer-role-card-controls p { max-width: 42rem; }
 .agenda-fields { display: grid; grid-template-columns: minmax(14rem, 2fr) minmax(10rem, 1fr); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
-.revision-card-fields { display: grid; grid-template-columns: minmax(14rem, 32rem); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
-.agenda-field, .revision-card-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
+.revision-card-fields, .peer-role-card-fields { display: grid; grid-template-columns: minmax(14rem, 32rem); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
+.agenda-field, .revision-card-field, .peer-role-card-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .dice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
 .die-card, .prompt-card { background: #fffaf1; border: 2px solid #ead6b7; border-radius: 22px; padding: 1rem; }
 .category { color: #81520f; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; }
@@ -34,15 +34,15 @@ pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem;
 .preset-fields { display: grid; grid-template-columns: minmax(12rem, 1fr) auto minmax(12rem, 1fr) auto auto; gap: 0.75rem; align-items: end; }
 .preset-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .status { min-height: 1.5rem; color: #68410d; font-weight: 700; }
-.print-sheet, .timer-card-print-sheet, .revision-card-print-sheet { display: none; }
+.print-sheet, .timer-card-print-sheet, .revision-card-print-sheet, .peer-role-card-print-sheet { display: none; }
 
 @media print {
   :root { color: #16120d; background: white; }
   body { background: white; }
   button, input, textarea, .hero, .dice-grid, .prompt-card { display: none !important; }
   .shell { max-width: none; margin: 0; padding: 0; }
-  .print-sheet, .timer-card-print-sheet, .revision-card-print-sheet { display: none; font-size: 12pt; line-height: 1.45; }
-  .print-prompt .print-sheet, .print-timer-cards .timer-card-print-sheet, .print-revision-cards .revision-card-print-sheet { display: block; }
+  .print-sheet, .timer-card-print-sheet, .revision-card-print-sheet, .peer-role-card-print-sheet { display: none; font-size: 12pt; line-height: 1.45; }
+  .print-prompt .print-sheet, .print-timer-cards .timer-card-print-sheet, .print-revision-cards .revision-card-print-sheet, .print-peer-role-cards .peer-role-card-print-sheet { display: block; }
   .print-sheet h2 { margin: 0 0 0.35in; font-size: 26pt; }
   .print-seed { margin: 0 0 0.25in; font-size: 13pt; }
   .print-dice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.14in; margin-bottom: 0.3in; }
@@ -68,8 +68,15 @@ pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem;
   .revision-card h3 { margin: 0; font-size: 16pt; }
   .revision-card-value { margin: 0.05in 0 0.1in; font-size: 14pt; font-weight: 800; }
   .revision-card p { margin: 0 0 0.08in; }
+  .peer-role-card-print-sheet h2 { margin: 0 0 0.12in; font-size: 22pt; }
+  .peer-role-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; border-top: 1px dashed #4f4539; border-left: 1px dashed #4f4539; }
+  .peer-role-card { min-height: 2.55in; break-inside: avoid; border-right: 1px dashed #4f4539; border-bottom: 1px dashed #4f4539; padding: 0.16in; }
+  .peer-role-card-meta { margin: 0 0 0.06in; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
+  .peer-role-card h3 { margin: 0; font-size: 16pt; }
+  .peer-role-card-focus { margin: 0.05in 0 0.1in; font-size: 14pt; font-weight: 800; }
+  .peer-role-card p { margin: 0 0 0.08in; }
 }
 
 @media (max-width: 640px) {
-  .agenda-fields, .revision-card-fields, .preset-fields { grid-template-columns: 1fr; }
+  .agenda-fields, .revision-card-fields, .peer-role-card-fields, .preset-fields { grid-template-columns: 1fr; }
 }

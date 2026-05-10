@@ -7,6 +7,9 @@ import {
   formatExportActionControls,
   formatHandout,
   formatMarkdownPrompt,
+  formatPeerRoleCardPrintLayout,
+  formatPeerRoleCards,
+  formatPeerRoleCardsControls,
   formatPrintSheet,
   formatPrompt,
   formatRevisionCardPrintLayout,
@@ -16,6 +19,7 @@ import {
   formatTimerCardPrintLayout,
   formatTimerCards,
   formatFacilitatorAgendaControls,
+  normalizePeerRoleCardsControls,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
   normalizeWordBankJson,
@@ -356,6 +360,124 @@ Facilitator prompt: Capture one revision question before the next sprint.
 Action: Check when each writer has one next revision question.`);
   });
 
+  it('formats deterministic small-group peer role cards using the current dice', () => {
+    const result = {
+      seed: 'peer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatPeerRoleCards(result, { title: ' Peer critique roles ' })).toBe(`Peer critique roles
+Seed: peer seed
+
+1. Connector
+Focus: Character and want
+Task: Name where the runaway archivist's choice clearly serves the want: to return a borrowed name.
+Question: Which sentence best proves the want on the page?
+
+2. Detail Coach
+Focus: Setting and object
+Task: Find one place where abandoned clock tower or brass compass can become a concrete sensory detail.
+Question: What can the writer add so readers can see, hear, or touch the moment?
+
+3. Stakes Coach
+Focus: Obstacle and want
+Task: Check whether a deadline at sunrise makes to return a borrowed name harder, riskier, or more personal.
+Question: What cost should increase before the scene ends?
+
+4. Twist Tracker
+Focus: Twist and next choice
+Task: Track how home has been following them changes what the runaway archivist does next.
+Question: Where should the writer show the consequence instead of explaining it?`);
+  });
+
+  it('formats a deterministic printable peer role-card layout with cut lines', () => {
+    const result = {
+      seed: 'peer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(formatPeerRoleCardPrintLayout(result, { title: ' Peer critique roles ' })).toEqual({
+      title: 'Peer critique roles',
+      seedLabel: 'Seed',
+      seed: 'peer seed',
+      cutLineLabel: 'Cut along dashed lines',
+      cards: [
+        {
+          number: 'Role 1 of 4',
+          role: 'Connector',
+          focus: 'Character and want',
+          task: "Name where the runaway archivist's choice clearly serves the want: to return a borrowed name.",
+          question: 'Which sentence best proves the want on the page?',
+        },
+        {
+          number: 'Role 2 of 4',
+          role: 'Detail Coach',
+          focus: 'Setting and object',
+          task: 'Find one place where abandoned clock tower or brass compass can become a concrete sensory detail.',
+          question: 'What can the writer add so readers can see, hear, or touch the moment?',
+        },
+        {
+          number: 'Role 3 of 4',
+          role: 'Stakes Coach',
+          focus: 'Obstacle and want',
+          task: 'Check whether a deadline at sunrise makes to return a borrowed name harder, riskier, or more personal.',
+          question: 'What cost should increase before the scene ends?',
+        },
+        {
+          number: 'Role 4 of 4',
+          role: 'Twist Tracker',
+          focus: 'Twist and next choice',
+          task: 'Track how home has been following them changes what the runaway archivist does next.',
+          question: 'Where should the writer show the consequence instead of explaining it?',
+        },
+      ],
+    });
+  });
+
+  it('normalizes and renders accessible peer role-card controls before copy and print buttons', () => {
+    expect(normalizePeerRoleCardsControls(' Critique round A ')).toEqual({
+      title: 'Critique round A',
+    });
+
+    expect(normalizePeerRoleCardsControls('   ')).toEqual({});
+
+    const controls = formatPeerRoleCardsControls({
+      title: 'Peer <roles> & "jobs"',
+    });
+
+    expect(controls).toContain('<label class="peer-role-card-field" for="peer-role-card-title">Peer role-card title</label>');
+    expect(controls).toContain(
+      '<input id="peer-role-card-title" value="Peer &lt;roles&gt; &amp; &quot;jobs&quot;" aria-describedby="peer-role-card-help" />',
+    );
+    expect(controls).toContain(
+      '<p id="peer-role-card-help">Set a small-group critique round title before copying or printing peer role cards.</p>',
+    );
+    expect(controls).toContain('<button id="copy-peer-role-cards" type="button">Copy peer role cards</button>');
+    expect(controls).toContain(
+      '<button id="print-peer-role-cards" type="button" aria-describedby="peer-role-card-help">Print peer role-card layout</button>',
+    );
+    expect(controls.indexOf('id="peer-role-card-title"')).toBeLessThan(
+      controls.indexOf('id="copy-peer-role-cards"'),
+    );
+    expect(controls.indexOf('id="copy-peer-role-cards"')).toBeLessThan(
+      controls.indexOf('id="print-peer-role-cards"'),
+    );
+  });
+
   it('formats a deterministic printable timer-card layout with cut lines', () => {
     const result = {
       seed: 'timer seed',
@@ -468,6 +590,7 @@ Action: Check when each writer has one next revision question.`);
     expect(formatCopySource(result, 'outline')).toBe(formatSceneBeatOutline(result));
     expect(formatCopySource(result, 'revisionCards')).toBe(formatRevisionCards(result));
     expect(formatCopySource(result, 'timerCards')).toBe(formatTimerCards(result));
+    expect(formatCopySource(result, 'peerRoleCards')).toBe(formatPeerRoleCards(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 

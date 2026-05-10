@@ -7,13 +7,17 @@ export type StoryDiceResult = {
 
 export type StoryDiceWordBank = Record<StoryDiceCategory, string[]>;
 
-export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards' | 'timerCards';
+export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards' | 'timerCards' | 'peerRoleCards';
 
 export type HandoutOptions = {
   title?: string;
 };
 
 export type RevisionCardsOptions = {
+  title?: string;
+};
+
+export type PeerRoleCardsOptions = {
   title?: string;
 };
 
@@ -47,6 +51,20 @@ export type RevisionCardPrintLayout = {
     number: string;
     category: string;
     value: string;
+    task: string;
+    question: string;
+  }[];
+};
+
+export type PeerRoleCardPrintLayout = {
+  title: string;
+  seedLabel: string;
+  seed: string;
+  cutLineLabel: string;
+  cards: {
+    number: string;
+    role: string;
+    focus: string;
     task: string;
     question: string;
   }[];
@@ -147,6 +165,37 @@ const agendaPhases = [
     name: 'Reflection',
     minutes: 2,
     prompt: 'Capture one revision question before the next sprint.',
+  },
+];
+
+const peerRoleCardGuidance = [
+  {
+    role: 'Connector',
+    focus: 'Character and want',
+    task: (result: StoryDiceResult) =>
+      `Name where the ${result.dice.character}'s choice clearly serves the want: ${result.dice.want}.`,
+    question: 'Which sentence best proves the want on the page?',
+  },
+  {
+    role: 'Detail Coach',
+    focus: 'Setting and object',
+    task: (result: StoryDiceResult) =>
+      `Find one place where ${result.dice.setting} or ${result.dice.object} can become a concrete sensory detail.`,
+    question: 'What can the writer add so readers can see, hear, or touch the moment?',
+  },
+  {
+    role: 'Stakes Coach',
+    focus: 'Obstacle and want',
+    task: (result: StoryDiceResult) =>
+      `Check whether ${result.dice.obstacle} makes ${result.dice.want} harder, riskier, or more personal.`,
+    question: 'What cost should increase before the scene ends?',
+  },
+  {
+    role: 'Twist Tracker',
+    focus: 'Twist and next choice',
+    task: (result: StoryDiceResult) =>
+      `Track how ${result.dice.twist} changes what the ${result.dice.character} does next.`,
+    question: 'Where should the writer show the consequence instead of explaining it?',
   },
 ];
 
@@ -338,6 +387,37 @@ export function formatRevisionCardPrintLayout(
   };
 }
 
+export function formatPeerRoleCards(result: StoryDiceResult, options: PeerRoleCardsOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab peer role cards';
+  const cards = peerRoleCardEntries(result).flatMap((card, index) => {
+    const lines = [
+      `${index + 1}. ${card.role}`,
+      `Focus: ${card.focus}`,
+      `Task: ${card.task}`,
+      `Question: ${card.question}`,
+    ];
+
+    return index === peerRoleCardGuidance.length - 1 ? lines : [...lines, ''];
+  });
+
+  return [title, `Seed: ${result.seed}`, '', ...cards].join('\n');
+}
+
+export function formatPeerRoleCardPrintLayout(
+  result: StoryDiceResult,
+  options: PeerRoleCardsOptions = {},
+): PeerRoleCardPrintLayout {
+  const title = options.title?.trim() || 'Story Dice Lab peer role cards';
+
+  return {
+    title,
+    seedLabel: 'Seed',
+    seed: result.seed,
+    cutLineLabel: 'Cut along dashed lines',
+    cards: peerRoleCardEntries(result),
+  };
+}
+
 export function formatExportActionControls(): string {
   return `<div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
@@ -356,6 +436,12 @@ export function normalizeRevisionCardsControls(title: string): RevisionCardsOpti
   return normalizedTitle ? { title: normalizedTitle } : {};
 }
 
+export function normalizePeerRoleCardsControls(title: string): PeerRoleCardsOptions {
+  const normalizedTitle = title.trim();
+
+  return normalizedTitle ? { title: normalizedTitle } : {};
+}
+
 export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: string): FacilitatorAgendaOptions {
   const normalizedTitle = title.trim();
   const parsedMinutes = Number(totalMinutes);
@@ -368,6 +454,23 @@ export function normalizeFacilitatorAgendaControls(title: string, totalMinutes: 
   }
 
   return options;
+}
+
+export function formatPeerRoleCardsControls(options: PeerRoleCardsOptions = {}): string {
+  const title = options.title?.trim() ?? '';
+
+  return `<div class="peer-role-card-controls" aria-labelledby="peer-role-card-controls-title">
+    <h2 id="peer-role-card-controls-title">Peer role cards</h2>
+    <p id="peer-role-card-help">Set a small-group critique round title before copying or printing peer role cards.</p>
+    <div class="peer-role-card-fields">
+      <div>
+        <label class="peer-role-card-field" for="peer-role-card-title">Peer role-card title</label>
+        <input id="peer-role-card-title" value="${escapeHtml(title)}" aria-describedby="peer-role-card-help" />
+      </div>
+    </div>
+    <button id="copy-peer-role-cards" type="button">Copy peer role cards</button>
+    <button id="print-peer-role-cards" type="button" aria-describedby="peer-role-card-help">Print peer role-card layout</button>
+  </div>`;
 }
 
 export function formatRevisionCardsControls(options: RevisionCardsOptions = {}): string {
@@ -434,6 +537,7 @@ export function formatCopySource(result: StoryDiceResult, source: CopySource): s
   if (source === 'outline') return formatSceneBeatOutline(result);
   if (source === 'revisionCards') return formatRevisionCards(result);
   if (source === 'timerCards') return formatTimerCards(result);
+  if (source === 'peerRoleCards') return formatPeerRoleCards(result);
   return formatPrompt(result);
 }
 
@@ -529,6 +633,16 @@ function revisionCardEntries(result: StoryDiceResult): RevisionCardPrintLayout['
       question: guidance.question,
     };
   });
+}
+
+function peerRoleCardEntries(result: StoryDiceResult): PeerRoleCardPrintLayout['cards'] {
+  return peerRoleCardGuidance.map((guidance, index) => ({
+    number: `Role ${index + 1} of ${peerRoleCardGuidance.length}`,
+    role: guidance.role,
+    focus: guidance.focus,
+    task: guidance.task(result),
+    question: guidance.question,
+  }));
 }
 
 function scaleAgendaMinutes(totalMinutes: number): number[] {
