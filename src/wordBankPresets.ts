@@ -5,6 +5,7 @@ export const maxWordBankPresetNameLength = 64;
 
 export type WordBankPreset = {
   name: string;
+  notes: string;
   wordBank: StoryDiceWordBank;
 };
 
@@ -13,7 +14,7 @@ export type SaveWordBankPresetResult =
   | { ok: false; reason: string };
 
 export type LoadWordBankPresetResult =
-  | { ok: true; name: string; wordBank: StoryDiceWordBank }
+  | { ok: true; name: string; notes: string; wordBank: StoryDiceWordBank }
   | { ok: false; reason: string };
 
 export type DeleteWordBankPresetResult =
@@ -38,6 +39,7 @@ export function saveWordBankPreset(
   storage: Storage,
   name: string,
   wordBank: StoryDiceWordBank,
+  notes = '',
 ): SaveWordBankPresetResult {
   const normalizedName = normalizePresetName(name);
   if (!normalizedName.ok) return normalizedName;
@@ -49,7 +51,7 @@ export function saveWordBankPreset(
 
   const normalizedWordBank = normalizeWordBankJson(wordBank);
   const existingIndex = readResult.presets.findIndex((preset) => preset.name === normalizedName.name);
-  const nextPreset = { name: normalizedName.name, wordBank: normalizedWordBank };
+  const nextPreset = { name: normalizedName.name, notes: normalizePresetNotes(notes), wordBank: normalizedWordBank };
   const presets =
     existingIndex >= 0
       ? readResult.presets.flatMap((preset, index) => {
@@ -72,7 +74,7 @@ export function loadWordBankPreset(storage: Storage, name: string): LoadWordBank
   const preset = readPresets(storage).presets.find((candidate) => candidate.name === normalizedName.name);
   if (!preset) return { ok: false, reason: 'Preset not found.' };
 
-  return { ok: true, name: preset.name, wordBank: preset.wordBank };
+  return { ok: true, name: preset.name, notes: preset.notes, wordBank: preset.wordBank };
 }
 
 export function deleteWordBankPreset(storage: Storage, name: string): DeleteWordBankPresetResult {
@@ -98,14 +100,14 @@ export function deleteWordBankPreset(storage: Storage, name: string): DeleteWord
 
 export function formatWordBankPresetControls(
   presets: WordBankPreset[],
-  options: { currentName?: string; selectedName?: string } = {},
+  options: { currentName?: string; currentNote?: string; selectedName?: string } = {},
 ): string {
   const hasPresets = presets.length > 0;
   const disabled = hasPresets ? '' : ' disabled';
   const optionHtml = presets
     .map((preset) => {
       const selected = preset.name === options.selectedName ? ' selected' : '';
-      return `<option value="${escapeHtml(preset.name)}"${selected}>${escapeHtml(preset.name)}</option>`;
+      return `<option value="${escapeHtml(preset.name)}" data-notes="${escapeHtml(preset.notes)}"${selected}>${escapeHtml(preset.name)}</option>`;
     })
     .join('');
 
@@ -116,6 +118,10 @@ export function formatWordBankPresetControls(
       <div>
         <label class="preset-field" for="preset-name">Preset name</label>
         <input id="preset-name" maxlength="${maxWordBankPresetNameLength}" value="${escapeHtml(options.currentName ?? '')}" aria-describedby="preset-help" />
+      </div>
+      <div>
+        <label class="preset-field" for="preset-notes">Preset notes</label>
+        <textarea id="preset-notes" rows="3" aria-describedby="preset-help">${escapeHtml(options.currentNote ?? '')}</textarea>
       </div>
       <button id="save-preset" type="button">Save preset</button>
       <div>
@@ -140,6 +146,10 @@ function normalizePresetName(name: string): { ok: true; name: string } | { ok: f
   }
 
   return { ok: true, name: normalizedName };
+}
+
+function normalizePresetNotes(notes: string): string {
+  return notes.trim();
 }
 
 function readPresets(storage: Storage): ReadPresetsResult {
@@ -171,12 +181,18 @@ function readPresets(storage: Storage): ReadPresetsResult {
 
 function writePresets(storage: Storage, presets: WordBankPreset[]): boolean {
   try {
+    const storedPresets = presets.map((preset) => ({
+      name: preset.name,
+      ...(preset.notes ? { notes: preset.notes } : {}),
+      wordBank: preset.wordBank,
+    }));
+
     storage.setItem(
       wordBankPresetStorageKey,
       JSON.stringify(
         {
           version: 1,
-          presets,
+          presets: storedPresets,
         },
         null,
         2,
@@ -203,7 +219,7 @@ function normalizeStoredPreset(value: unknown): WordBankPreset[] {
     return [];
   }
 
-  const record = value as { name?: unknown; wordBank?: unknown };
+  const record = value as { name?: unknown; notes?: unknown; wordBank?: unknown };
   if (typeof record.name !== 'string') {
     return [];
   }
@@ -214,7 +230,13 @@ function normalizeStoredPreset(value: unknown): WordBankPreset[] {
   }
 
   try {
-    return [{ name: normalizedName.name, wordBank: normalizeWordBankJson(record.wordBank) }];
+    return [
+      {
+        name: normalizedName.name,
+        notes: typeof record.notes === 'string' ? normalizePresetNotes(record.notes) : '',
+        wordBank: normalizeWordBankJson(record.wordBank),
+      },
+    ];
   } catch {
     return [];
   }

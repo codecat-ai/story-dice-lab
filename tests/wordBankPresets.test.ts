@@ -32,6 +32,7 @@ describe('word-bank presets', () => {
     expect(listWordBankPresets(storage)).toEqual([
       {
         name: 'Middle Grade Mystery',
+        notes: '',
         wordBank: {
           ...validBank,
           character: ['second hero'],
@@ -49,6 +50,65 @@ describe('word-bank presets', () => {
           },
         },
       ],
+    });
+  });
+
+  it('saves and loads optional trimmed notes as preset metadata outside the word bank', () => {
+    const storage = new MemoryStorage();
+
+    expect(saveWordBankPreset(storage, '  Middle Grade Mystery  ', validBank, '  Grades 6-8 genre sprint  ')).toEqual({
+      ok: true,
+      name: 'Middle Grade Mystery',
+      overwritten: false,
+    });
+
+    expect(listWordBankPresets(storage)).toEqual([
+      {
+        name: 'Middle Grade Mystery',
+        notes: 'Grades 6-8 genre sprint',
+        wordBank: validBank,
+      },
+    ]);
+    expect(loadWordBankPreset(storage, 'Middle Grade Mystery')).toEqual({
+      ok: true,
+      name: 'Middle Grade Mystery',
+      notes: 'Grades 6-8 genre sprint',
+      wordBank: validBank,
+    });
+    expect(JSON.parse(storage.getItem(wordBankPresetStorageKey) ?? '{}')).toEqual({
+      version: 1,
+      presets: [
+        {
+          name: 'Middle Grade Mystery',
+          notes: 'Grades 6-8 genre sprint',
+          wordBank: validBank,
+        },
+      ],
+    });
+  });
+
+  it('defaults older stored presets and blank preset notes to empty text', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      wordBankPresetStorageKey,
+      JSON.stringify({
+        version: 1,
+        presets: [
+          { name: 'Legacy', wordBank: validBank },
+          { name: 'Blank note', notes: '   ', wordBank: validBank },
+        ],
+      }),
+    );
+
+    expect(listWordBankPresets(storage)).toEqual([
+      { name: 'Legacy', notes: '', wordBank: validBank },
+      { name: 'Blank note', notes: '', wordBank: validBank },
+    ]);
+    expect(loadWordBankPreset(storage, 'Legacy')).toEqual({
+      ok: true,
+      name: 'Legacy',
+      notes: '',
+      wordBank: validBank,
     });
   });
 
@@ -81,7 +141,7 @@ describe('word-bank presets', () => {
       }),
     );
 
-    expect(listWordBankPresets(storage)).toEqual([{ name: 'Valid', wordBank: validBank }]);
+    expect(listWordBankPresets(storage)).toEqual([{ name: 'Valid', notes: '', wordBank: validBank }]);
 
     storage.setItem(wordBankPresetStorageKey, '{not json');
     expect(listWordBankPresets(storage)).toEqual([]);
@@ -96,6 +156,7 @@ describe('word-bank presets', () => {
     expect(loadWordBankPreset(storage, ' Genre B ')).toEqual({
       ok: true,
       name: 'Genre B',
+      notes: '',
       wordBank: { ...validBank, object: ['silver key'] },
     });
     expect(deleteWordBankPreset(storage, 'Genre A')).toEqual({ ok: true, name: 'Genre A' });
@@ -119,21 +180,24 @@ describe('word-bank presets', () => {
   });
 
   it('renders accessible preset controls with escaped names and disabled empty-state actions', () => {
-    const emptyControls = formatWordBankPresetControls([]);
+    const emptyControls = formatWordBankPresetControls([], { currentNote: '  Draft note  ' });
     const controls = formatWordBankPresetControls([
-      { name: 'Mystery <A>', wordBank: validBank },
-      { name: 'Sci-Fi & Fantasy', wordBank: validBank },
-    ]);
+      { name: 'Mystery <A>', notes: 'Ages 10 < 12', wordBank: validBank },
+      { name: 'Sci-Fi & Fantasy', notes: 'Club & library', wordBank: validBank },
+    ], { currentNote: 'Club & library' });
 
     expect(emptyControls).toContain('<label class="preset-field" for="preset-name">Preset name</label>');
+    expect(emptyControls).toContain('<label class="preset-field" for="preset-notes">Preset notes</label>');
+    expect(emptyControls).toContain('<textarea id="preset-notes" rows="3" aria-describedby="preset-help">  Draft note  </textarea>');
     expect(emptyControls).toContain('<button id="load-preset" type="button" disabled>Load preset</button>');
     expect(emptyControls).toContain('<button id="delete-preset" type="button" disabled>Delete preset</button>');
     expect(controls).toContain(
-      '<option value="Mystery &lt;A&gt;">Mystery &lt;A&gt;</option>',
+      '<option value="Mystery &lt;A&gt;" data-notes="Ages 10 &lt; 12">Mystery &lt;A&gt;</option>',
     );
     expect(controls).toContain(
-      '<option value="Sci-Fi &amp; Fantasy">Sci-Fi &amp; Fantasy</option>',
+      '<option value="Sci-Fi &amp; Fantasy" data-notes="Club &amp; library">Sci-Fi &amp; Fantasy</option>',
     );
+    expect(controls).toContain('<textarea id="preset-notes" rows="3" aria-describedby="preset-help">Club &amp; library</textarea>');
     expect(controls).toContain('<button id="save-preset" type="button">Save preset</button>');
     expect(controls).toContain('<button id="load-preset" type="button">Load preset</button>');
     expect(controls).toContain('<button id="delete-preset" type="button">Delete preset</button>');

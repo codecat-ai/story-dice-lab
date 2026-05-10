@@ -31,7 +31,7 @@ pre { white-space: pre-wrap; background: #271d30; color: #fff2cc; padding: 1rem;
 .preset-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ead6b7; }
 .preset-controls h3 { margin: 0; font-size: 1.1rem; }
 .preset-controls p { max-width: 42rem; }
-.preset-fields { display: grid; grid-template-columns: minmax(12rem, 1fr) auto minmax(12rem, 1fr) auto auto; gap: 0.75rem; align-items: end; }
+.preset-fields { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(14rem, 1.3fr) auto minmax(12rem, 1fr) auto auto; gap: 0.75rem; align-items: end; }
 .preset-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .status { min-height: 1.5rem; color: #68410d; font-weight: 700; }
 .print-sheet, .timer-card-print-sheet, .revision-card-print-sheet, .peer-role-card-print-sheet { display: none; }
