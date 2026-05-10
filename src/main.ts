@@ -52,6 +52,7 @@ let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
 let wordBankPresetName = '';
+let wordBankPresetNotes = '';
 let selectedWordBankPresetName = '';
 let wordBankPresets: WordBankPreset[] = readWordBankPresets();
 let agendaTitle = '';
@@ -102,6 +103,7 @@ function render(): void {
         </div>
         ${formatWordBankPresetControls(wordBankPresets, {
           currentName: wordBankPresetName,
+          currentNote: wordBankPresetNotes,
           selectedName: selectedWordBankPresetName,
         })}
         <p class="status" role="status">${escapeHtml(wordBankStatus)}</p>
@@ -198,8 +200,15 @@ function render(): void {
   document.querySelector<HTMLInputElement>('#preset-name')?.addEventListener('input', (event) => {
     wordBankPresetName = (event.target as HTMLInputElement).value;
   });
+  document.querySelector<HTMLTextAreaElement>('#preset-notes')?.addEventListener('input', (event) => {
+    wordBankPresetNotes = (event.target as HTMLTextAreaElement).value;
+  });
   document.querySelector<HTMLSelectElement>('#preset-select')?.addEventListener('change', (event) => {
-    selectedWordBankPresetName = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    selectedWordBankPresetName = select.value;
+    wordBankPresetNotes = select.selectedOptions[0]?.dataset.notes ?? '';
+    const notesInput = document.querySelector<HTMLTextAreaElement>('#preset-notes');
+    if (notesInput) notesInput.value = wordBankPresetNotes;
   });
   document.querySelector<HTMLButtonElement>('#import-bank')?.addEventListener('click', () => {
     try {
@@ -236,11 +245,12 @@ function render(): void {
       return;
     }
 
-    const saveResult = saveWordBankPreset(storage, wordBankPresetName, currentWordBank);
+    const saveResult = saveWordBankPreset(storage, wordBankPresetName, currentWordBank, wordBankPresetNotes);
     if (saveResult.ok) {
       selectedWordBankPresetName = saveResult.name;
       wordBankPresetName = saveResult.name;
       wordBankPresets = listWordBankPresets(storage);
+      wordBankPresetNotes = wordBankPresets.find((preset) => preset.name === saveResult.name)?.notes ?? '';
       const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
       result = rollDice(seed, preserved, currentWordBank);
       wordBankStatus = saveResult.overwritten
@@ -265,6 +275,7 @@ function render(): void {
       currentWordBank = loadResult.wordBank;
       wordBankText = serializeWordBank(currentWordBank);
       wordBankPresetName = loadResult.name;
+      wordBankPresetNotes = loadResult.notes;
       selectedWordBankPresetName = loadResult.name;
       const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
       result = rollDice(seed, preserved, currentWordBank);
@@ -288,6 +299,7 @@ function render(): void {
     if (deleteResult.ok) {
       wordBankPresets = listWordBankPresets(storage);
       selectedWordBankPresetName = wordBankPresets[0]?.name ?? '';
+      wordBankPresetNotes = wordBankPresets.find((preset) => preset.name === selectedWordBankPresetName)?.notes ?? '';
       if (wordBankPresetName === deleteResult.name) wordBankPresetName = '';
       wordBankStatus = `Deleted local preset "${deleteResult.name}". Current word bank was not changed.`;
     } else {
