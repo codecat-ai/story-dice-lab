@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeShareState,
   encodeShareState,
+  formatActionPlanControls,
   formatFacilitatorAgenda,
   formatCopySource,
   formatExportActionControls,
@@ -15,10 +16,12 @@ import {
   formatRevisionCardPrintLayout,
   formatRevisionCards,
   formatRevisionCardsControls,
+  formatRevisionActionPlan,
   formatSceneBeatOutline,
   formatTimerCardPrintLayout,
   formatTimerCards,
   formatFacilitatorAgendaControls,
+  normalizeActionPlanControls,
   normalizePeerRoleCardsControls,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
@@ -448,6 +451,65 @@ Question: Where should the writer show the consequence instead of explaining it?
     });
   });
 
+  it('formats a compact deterministic post-critique action plan with exactly three prioritized steps', () => {
+    const result = {
+      seed: 'action seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    const plan = formatRevisionActionPlan(result, { title: ' Post-critique pass ' });
+
+    expect(plan).toBe(`Post-critique pass
+Seed: action seed
+
+Prioritized next steps
+1. Connector - Character/want: Revise one sentence so the runaway archivist makes a visible choice toward this want: to return a borrowed name.
+2. Detail Coach - Setting/object: Add one concrete sensory beat where abandoned clock tower changes how brass compass is used.
+3. Stakes Coach - Obstacle/twist: Raise the cost by showing how a deadline at sunrise or home has been following them changes the next decision.
+
+Commit: I will revise the next draft using these three critique-backed steps.`);
+    expect(plan.match(/^\d\. /gm)).toHaveLength(3);
+  });
+
+  it('uses the default action-plan title when a custom title is blank', () => {
+    const result = rollDice('paper comet');
+
+    expect(formatRevisionActionPlan(result, { title: '   ' }).startsWith('Story Dice Lab action plan\nSeed: paper comet')).toBe(
+      true,
+    );
+  });
+
+  it('normalizes and renders accessible action-plan controls before the copy button', () => {
+    expect(normalizeActionPlanControls(' Critique next steps ')).toEqual({
+      title: 'Critique next steps',
+    });
+
+    expect(normalizeActionPlanControls('   ')).toEqual({});
+
+    const controls = formatActionPlanControls({
+      title: 'Plan <round> & "commit"',
+    });
+
+    expect(controls).toContain('<label class="action-plan-field" for="action-plan-title">Action-plan title</label>');
+    expect(controls).toContain(
+      '<input id="action-plan-title" value="Plan &lt;round&gt; &amp; &quot;commit&quot;" aria-describedby="action-plan-help" />',
+    );
+    expect(controls).toContain(
+      '<p id="action-plan-help">Set a post-critique title before copying a three-step revision action plan.</p>',
+    );
+    expect(controls).toContain('<button id="copy-action-plan" type="button">Copy action plan</button>');
+    expect(controls.indexOf('id="action-plan-title"')).toBeLessThan(
+      controls.indexOf('id="copy-action-plan"'),
+    );
+  });
+
   it('normalizes and renders accessible peer role-card controls before copy and print buttons', () => {
     expect(normalizePeerRoleCardsControls(' Critique round A ')).toEqual({
       title: 'Critique round A',
@@ -591,6 +653,7 @@ Question: Where should the writer show the consequence instead of explaining it?
     expect(formatCopySource(result, 'revisionCards')).toBe(formatRevisionCards(result));
     expect(formatCopySource(result, 'timerCards')).toBe(formatTimerCards(result));
     expect(formatCopySource(result, 'peerRoleCards')).toBe(formatPeerRoleCards(result));
+    expect(formatCopySource(result, 'actionPlan')).toBe(formatRevisionActionPlan(result));
     expect(formatCopySource(result, 'compact')).toBe(formatPrompt(result));
   });
 
