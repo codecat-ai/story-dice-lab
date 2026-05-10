@@ -7,7 +7,14 @@ export type StoryDiceResult = {
 
 export type StoryDiceWordBank = Record<StoryDiceCategory, string[]>;
 
-export type CopySource = 'compact' | 'handout' | 'outline' | 'revisionCards' | 'timerCards' | 'peerRoleCards';
+export type CopySource =
+  | 'compact'
+  | 'handout'
+  | 'outline'
+  | 'revisionCards'
+  | 'timerCards'
+  | 'peerRoleCards'
+  | 'actionPlan';
 
 export type HandoutOptions = {
   title?: string;
@@ -18,6 +25,10 @@ export type RevisionCardsOptions = {
 };
 
 export type PeerRoleCardsOptions = {
+  title?: string;
+};
+
+export type ActionPlanOptions = {
   title?: string;
 };
 
@@ -418,6 +429,23 @@ export function formatPeerRoleCardPrintLayout(
   };
 }
 
+export function formatRevisionActionPlan(result: StoryDiceResult, options: ActionPlanOptions = {}): string {
+  const title = options.title?.trim() || 'Story Dice Lab action plan';
+  const { character, want, setting, obstacle, object, twist } = result.dice;
+
+  return [
+    title,
+    `Seed: ${result.seed}`,
+    '',
+    'Prioritized next steps',
+    `1. Connector - Character/want: Revise one sentence so the ${character} makes a visible choice toward this want: ${want}.`,
+    `2. Detail Coach - Setting/object: Add one concrete sensory beat where ${setting} changes how ${object} is used.`,
+    `3. Stakes Coach - Obstacle/twist: Raise the cost by showing how ${obstacle} or ${twist} changes the next decision.`,
+    '',
+    'Commit: I will revise the next draft using these three critique-backed steps.',
+  ].join('\n');
+}
+
 export function formatExportActionControls(): string {
   return `<div class="actions">
           <button id="roll-all" type="button">Reroll all unlocked dice</button>
@@ -437,6 +465,12 @@ export function normalizeRevisionCardsControls(title: string): RevisionCardsOpti
 }
 
 export function normalizePeerRoleCardsControls(title: string): PeerRoleCardsOptions {
+  const normalizedTitle = title.trim();
+
+  return normalizedTitle ? { title: normalizedTitle } : {};
+}
+
+export function normalizeActionPlanControls(title: string): ActionPlanOptions {
   const normalizedTitle = title.trim();
 
   return normalizedTitle ? { title: normalizedTitle } : {};
@@ -513,6 +547,22 @@ export function formatFacilitatorAgendaControls(options: FacilitatorAgendaOption
   </div>`;
 }
 
+export function formatActionPlanControls(options: ActionPlanOptions = {}): string {
+  const title = options.title?.trim() ?? '';
+
+  return `<div class="action-plan-controls" aria-labelledby="action-plan-controls-title">
+    <h2 id="action-plan-controls-title">Action plan</h2>
+    <p id="action-plan-help">Set a post-critique title before copying a three-step revision action plan.</p>
+    <div class="action-plan-fields">
+      <div>
+        <label class="action-plan-field" for="action-plan-title">Action-plan title</label>
+        <input id="action-plan-title" value="${escapeHtml(title)}" aria-describedby="action-plan-help" />
+      </div>
+    </div>
+    <button id="copy-action-plan" type="button">Copy action plan</button>
+  </div>`;
+}
+
 export function formatMarkdownPrompt(result: StoryDiceResult): string {
   const diceLines = storyDiceCategories.map((category) => {
     const label = category[0].toUpperCase() + category.slice(1);
@@ -538,6 +588,7 @@ export function formatCopySource(result: StoryDiceResult, source: CopySource): s
   if (source === 'revisionCards') return formatRevisionCards(result);
   if (source === 'timerCards') return formatTimerCards(result);
   if (source === 'peerRoleCards') return formatPeerRoleCards(result);
+  if (source === 'actionPlan') return formatRevisionActionPlan(result);
   return formatPrompt(result);
 }
 

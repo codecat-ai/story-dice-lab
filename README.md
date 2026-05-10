@@ -25,6 +25,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Print classroom revision-card layouts with dashed cut lines, one card per die/category, using the same title, seed, and current roll.
 - Copy deterministic small-group peer role cards with an editable critique-round title and facilitator-friendly roles that use the current dice.
 - Print small-group peer role-card layouts with dashed cut lines for critique rounds.
+- Copy a compact deterministic post-critique action plan with an editable title, exactly three prioritized next steps, and a closing revision commit line.
 - Copy a Markdown prompt with escaped dice values and the same workshop questions.
 - Print the current prompt as a workshop-friendly browser sheet with controls hidden.
 - Copy shareable URL hashes that restore the seed and locked dice.
@@ -52,7 +53,7 @@ Open the local Vite URL shown in the terminal.
 
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, click **Print timer-card layout** to print those phase cards with dashed cut lines, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Print revision-card layout** to print one cut-out revision card for each die/category, set the peer role-card title before clicking **Copy peer role cards** to assign small-group critique jobs, click **Print peer role-card layout** to print cut-out role cards, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, click **Print timer-card layout** to print those phase cards with dashed cut lines, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Print revision-card layout** to print one cut-out revision card for each die/category, set the peer role-card title before clicking **Copy peer role cards** to assign small-group critique jobs, click **Print peer role-card layout** to print cut-out role cards, set the action-plan title before clicking **Copy action plan** to copy three critique-backed next steps, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
 The outline preview includes the seed and five beats: opening image, desire, complication, turning point, and ending hook. Together the beats reuse the character, want, setting, obstacle, object, and twist from the current roll.
 
@@ -63,6 +64,8 @@ The timer cards use the same title, seed, total minutes, and scaled phase durati
 The revision cards include the custom title when provided, the seed, and six numbered cards. Character asks for agency, want raises stakes, setting adds sensory detail, obstacle escalates pressure, object requires concrete action, and twist follows through with consequence. The print layout turns the same deterministic card data into a two-column sheet with dashed cut lines for workshop cutting.
 
 The peer role cards include the custom title when provided, the seed, and four small-group jobs: Connector, Detail Coach, Stakes Coach, and Twist Tracker. Each role uses the current dice so critique stays tied to the active prompt rather than generic feedback. The print layout turns the same deterministic card data into a two-column sheet with dashed cut lines.
+
+The action plan includes the custom title when provided, the seed, three numbered next steps, and a commit line. The steps map peer-role feedback focus back to dice categories: character/want for Connector, setting/object for Detail Coach, and obstacle/twist for Stakes Coach.
 
 To use a custom word bank, paste JSON with all six categories:
 
@@ -97,12 +100,12 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and `tests/wordBankPresets.test.ts`. They cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, classroom revision card export and printable revision-card cut-line layout with editable title controls, small-group peer role-card export and printable peer role-card cut-line layout with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, custom word-bank import/export, and local word-bank preset storage with optional notes.
+Behavior tests live in `tests/storyDice.test.ts` and `tests/wordBankPresets.test.ts`. They cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, classroom revision card export and printable revision-card cut-line layout with editable title controls, small-group peer role-card export and printable peer role-card cut-line layout with editable title controls, compact post-critique action-plan export with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, custom word-bank import/export, and local word-bank preset storage with optional notes.
 
 ## Roadmap
 
 - Add optional large-type facilitator timer display for live in-room use.
-- Add a compact post-critique action-plan export that turns selected feedback roles into next revision steps.
+- Add importable classroom session templates that prefill seeds, timing, and word-bank presets for repeat workshops.
 
 ## Contributing
 

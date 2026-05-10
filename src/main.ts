@@ -2,6 +2,7 @@ import {
   decodeShareState,
   defaultWordBank,
   encodeShareState,
+  formatActionPlanControls,
   formatCopySource,
   formatExportActionControls,
   formatFacilitatorAgendaControls,
@@ -14,11 +15,13 @@ import {
   formatPrintSheet,
   formatPrompt,
   formatRevisionCardPrintLayout,
+  formatRevisionActionPlan,
   formatSceneBeatOutline,
   formatRevisionCards,
   formatRevisionCardsControls,
   formatTimerCards,
   formatTimerCardPrintLayout,
+  normalizeActionPlanControls,
   normalizePeerRoleCardsControls,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
@@ -59,6 +62,7 @@ let agendaTitle = '';
 let agendaTotalMinutes = '25';
 let revisionCardsTitle = '';
 let peerRoleCardsTitle = '';
+let actionPlanTitle = '';
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 let printTarget: 'prompt' | 'timer-cards' | 'revision-cards' | 'peer-role-cards' = 'prompt';
@@ -67,6 +71,7 @@ function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
   const revisionCardsOptions = normalizeRevisionCardsControls(revisionCardsTitle);
   const peerRoleCardsOptions = normalizePeerRoleCardsControls(peerRoleCardsTitle);
+  const actionPlanOptions = normalizeActionPlanControls(actionPlanTitle);
 
   app.innerHTML = `
     <main class="shell print-${printTarget}">
@@ -80,6 +85,7 @@ function render(): void {
         ${formatExportActionControls()}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
+        ${formatActionPlanControls(actionPlanOptions)}
         ${formatFacilitatorAgendaControls(agendaOptions)}
       </section>
       <section class="dice-grid" aria-label="Story dice results">
@@ -115,6 +121,10 @@ function render(): void {
       <section class="prompt-card">
         <h2>Facilitator agenda</h2>
         <pre id="agenda-preview">${escapeHtml(formatFacilitatorAgenda(result, agendaOptions))}</pre>
+      </section>
+      <section class="prompt-card">
+        <h2>Action plan</h2>
+        <pre id="action-plan-preview">${escapeHtml(formatRevisionActionPlan(result, actionPlanOptions))}</pre>
       </section>
       ${printSheet()}
       ${revisionCardPrintSheet(revisionCardsOptions)}
@@ -160,6 +170,13 @@ function render(): void {
   });
   document.querySelector<HTMLInputElement>('#peer-role-card-title')?.addEventListener('input', (event) => {
     peerRoleCardsTitle = (event.target as HTMLInputElement).value;
+  });
+  document.querySelector<HTMLInputElement>('#action-plan-title')?.addEventListener('input', (event) => {
+    actionPlanTitle = (event.target as HTMLInputElement).value;
+    updateActionPlanPreview();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-action-plan')?.addEventListener('click', async () => {
+    await copyText(formatRevisionActionPlan(result, normalizeActionPlanControls(actionPlanTitle)));
   });
   document.querySelector<HTMLInputElement>('#agenda-title')?.addEventListener('input', (event) => {
     agendaTitle = (event.target as HTMLInputElement).value;
@@ -443,6 +460,13 @@ function updateAgendaPreview(): void {
       result,
       normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
     );
+  }
+}
+
+function updateActionPlanPreview(): void {
+  const preview = document.querySelector<HTMLPreElement>('#action-plan-preview');
+  if (preview) {
+    preview.textContent = formatRevisionActionPlan(result, normalizeActionPlanControls(actionPlanTitle));
   }
 }
 
