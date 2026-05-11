@@ -21,10 +21,12 @@ import {
   formatTimerCardPrintLayout,
   formatTimerCards,
   formatFacilitatorAgendaControls,
+  formatFacilitatorTimerDisplay,
   normalizeActionPlanControls,
   normalizePeerRoleCardsControls,
   normalizeFacilitatorAgendaControls,
   normalizeRevisionCardsControls,
+  resolveFacilitatorTimerPhase,
   normalizeWordBankJson,
   printCurrentPrompt,
   rerollDie,
@@ -361,6 +363,83 @@ Action: Check when brass compass or home has been following them has changed a c
 Phase 5 of 5: Reflection
 Facilitator prompt: Capture one revision question before the next sprint.
 Action: Check when each writer has one next revision question.`);
+  });
+
+  it('computes facilitator timer phase state with previous and next phase boundaries', () => {
+    const result = {
+      seed: 'timer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    expect(resolveFacilitatorTimerPhase(result, 0, { totalMinutes: 17 })).toEqual({
+      currentIndex: 0,
+      totalPhases: 5,
+      phaseLabel: 'Phase 1 of 5',
+      name: 'Warm-up',
+      minutes: 2,
+      prompt: 'Read all six dice aloud and ask everyone to choose one image that feels alive.',
+      action: 'Check when the group has named one vivid image.',
+      previousIndex: 0,
+      nextIndex: 1,
+      isFirst: true,
+      isLast: false,
+    });
+
+    expect(resolveFacilitatorTimerPhase(result, 2, { totalMinutes: 17 })).toMatchObject({
+      currentIndex: 2,
+      phaseLabel: 'Phase 3 of 5',
+      name: 'Draft',
+      minutes: 7,
+      previousIndex: 1,
+      nextIndex: 3,
+      isFirst: false,
+      isLast: false,
+    });
+
+    expect(resolveFacilitatorTimerPhase(result, 99, { totalMinutes: 17 })).toMatchObject({
+      currentIndex: 4,
+      phaseLabel: 'Phase 5 of 5',
+      name: 'Reflection',
+      minutes: 2,
+      previousIndex: 3,
+      nextIndex: 4,
+      isFirst: false,
+      isLast: true,
+    });
+  });
+
+  it('renders an accessible large-type facilitator timer display with manual controls', () => {
+    const result = {
+      seed: 'timer seed',
+      dice: {
+        character: 'runaway archivist',
+        want: 'to return a borrowed name',
+        setting: 'abandoned clock tower',
+        obstacle: 'a deadline at sunrise',
+        object: 'brass compass',
+        twist: 'home has been following them',
+      },
+    };
+
+    const display = formatFacilitatorTimerDisplay(result, 2, { title: ' Live sprint ', totalMinutes: 17 });
+
+    expect(display).toContain('<section class="facilitator-timer-display" aria-labelledby="facilitator-timer-title">');
+    expect(display).toContain('<h2 id="facilitator-timer-title">Live sprint</h2>');
+    expect(display).toContain('<p class="timer-display-phase">Phase 3 of 5</p>');
+    expect(display).toContain('<p class="timer-display-name">Draft</p>');
+    expect(display).toContain('<p class="timer-display-minutes" aria-label="7 minutes">7<span>min</span></p>');
+    expect(display).toContain('Write one scene in the setting while the obstacle pushes back.');
+    expect(display).toContain('Check when the scene uses abandoned clock tower and a deadline at sunrise on the page.');
+    expect(display).toContain('<button id="timer-prev" type="button" aria-label="Show previous timer phase">Previous</button>');
+    expect(display).toContain('<button id="timer-reset" type="button" aria-label="Reset timer display to first phase">Reset</button>');
+    expect(display).toContain('<button id="timer-next" type="button" aria-label="Show next timer phase">Next</button>');
   });
 
   it('formats deterministic small-group peer role cards using the current dice', () => {
