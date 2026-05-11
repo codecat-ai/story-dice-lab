@@ -7,6 +7,7 @@ import {
   formatExportActionControls,
   formatFacilitatorAgendaControls,
   formatFacilitatorAgenda,
+  formatFacilitatorTimerDisplay,
   formatHandout,
   formatMarkdownPrompt,
   formatPeerRoleCardPrintLayout,
@@ -63,6 +64,7 @@ let agendaTotalMinutes = '25';
 let revisionCardsTitle = '';
 let peerRoleCardsTitle = '';
 let actionPlanTitle = '';
+let timerPhaseIndex = 0;
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 let printTarget: 'prompt' | 'timer-cards' | 'revision-cards' | 'peer-role-cards' = 'prompt';
@@ -122,6 +124,7 @@ function render(): void {
         <h2>Facilitator agenda</h2>
         <pre id="agenda-preview">${escapeHtml(formatFacilitatorAgenda(result, agendaOptions))}</pre>
       </section>
+      ${formatFacilitatorTimerDisplay(result, timerPhaseIndex, agendaOptions)}
       <section class="prompt-card">
         <h2>Action plan</h2>
         <pre id="action-plan-preview">${escapeHtml(formatRevisionActionPlan(result, actionPlanOptions))}</pre>
@@ -138,6 +141,7 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
     const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
     result = rollDice(`${seed}:${Date.now()}`, preserved, currentWordBank);
+    timerPhaseIndex = 0;
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
@@ -181,10 +185,12 @@ function render(): void {
   document.querySelector<HTMLInputElement>('#agenda-title')?.addEventListener('input', (event) => {
     agendaTitle = (event.target as HTMLInputElement).value;
     updateAgendaPreview();
+    updateFacilitatorTimerDisplay();
   });
   document.querySelector<HTMLInputElement>('#agenda-minutes')?.addEventListener('input', (event) => {
     agendaTotalMinutes = (event.target as HTMLInputElement).value;
     updateAgendaPreview();
+    updateFacilitatorTimerDisplay();
   });
   document.querySelector<HTMLButtonElement>('#copy-agenda')?.addEventListener('click', async () => {
     await copyText(
@@ -199,6 +205,7 @@ function render(): void {
     render();
     requestAnimationFrame(() => printCurrentPrompt(window));
   });
+  wireFacilitatorTimerControls();
   document.querySelector<HTMLButtonElement>('#copy-markdown')?.addEventListener('click', async () => {
     await copyText(formatMarkdownPrompt(result));
   });
@@ -233,6 +240,7 @@ function render(): void {
       wordBankText = serializeWordBank(currentWordBank);
       const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
       result = rollDice(seed, preserved, currentWordBank);
+      timerPhaseIndex = 0;
       wordBankStatus = 'Imported custom word bank. Locked dice were preserved.';
     } catch (error) {
       wordBankStatus = error instanceof Error ? error.message : 'Word bank import failed.';
@@ -270,6 +278,7 @@ function render(): void {
       wordBankPresetNotes = wordBankPresets.find((preset) => preset.name === saveResult.name)?.notes ?? '';
       const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
       result = rollDice(seed, preserved, currentWordBank);
+      timerPhaseIndex = 0;
       wordBankStatus = saveResult.overwritten
         ? `Updated local preset "${saveResult.name}". Locked dice were preserved.`
         : `Saved local preset "${saveResult.name}". Locked dice were preserved.`;
@@ -296,6 +305,7 @@ function render(): void {
       selectedWordBankPresetName = loadResult.name;
       const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
       result = rollDice(seed, preserved, currentWordBank);
+      timerPhaseIndex = 0;
       wordBankStatus = `Loaded local preset "${loadResult.name}". Locked dice were preserved.`;
     } else {
       wordBankStatus = loadResult.reason;
@@ -327,6 +337,7 @@ function render(): void {
   for (const category of storyDiceCategories) {
     document.querySelector<HTMLButtonElement>(`[data-reroll="${category}"]`)?.addEventListener('click', () => {
       result = rerollDie(result, category, `${seed}:${Date.now()}`, currentWordBank);
+      timerPhaseIndex = 0;
       render();
     });
     document.querySelector<HTMLInputElement>(`[data-lock="${category}"]`)?.addEventListener('change', (event) => {
@@ -342,6 +353,21 @@ function setPrintTarget(): void {
   document.querySelector('.shell')?.classList.toggle('print-revision-cards', printTarget === 'revision-cards');
   document.querySelector('.shell')?.classList.toggle('print-peer-role-cards', printTarget === 'peer-role-cards');
   document.querySelector('.shell')?.classList.toggle('print-prompt', printTarget === 'prompt');
+}
+
+function wireFacilitatorTimerControls(): void {
+  document.querySelector<HTMLButtonElement>('#timer-prev')?.addEventListener('click', () => {
+    timerPhaseIndex = Math.max(0, timerPhaseIndex - 1);
+    updateFacilitatorTimerDisplay();
+  });
+  document.querySelector<HTMLButtonElement>('#timer-reset')?.addEventListener('click', () => {
+    timerPhaseIndex = 0;
+    updateFacilitatorTimerDisplay();
+  });
+  document.querySelector<HTMLButtonElement>('#timer-next')?.addEventListener('click', () => {
+    timerPhaseIndex += 1;
+    updateFacilitatorTimerDisplay();
+  });
 }
 
 function printSheet(): string {
@@ -461,6 +487,18 @@ function updateAgendaPreview(): void {
       normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
     );
   }
+}
+
+function updateFacilitatorTimerDisplay(): void {
+  const display = document.querySelector<HTMLElement>('.facilitator-timer-display');
+  if (!display) return;
+
+  display.outerHTML = formatFacilitatorTimerDisplay(
+    result,
+    timerPhaseIndex,
+    normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+  );
+  wireFacilitatorTimerControls();
 }
 
 function updateActionPlanPreview(): void {

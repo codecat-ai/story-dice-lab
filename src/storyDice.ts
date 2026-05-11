@@ -37,6 +37,20 @@ export type FacilitatorAgendaOptions = {
   totalMinutes?: number;
 };
 
+export type FacilitatorTimerPhaseState = {
+  currentIndex: number;
+  totalPhases: number;
+  phaseLabel: string;
+  name: string;
+  minutes: number;
+  prompt: string;
+  action: string;
+  previousIndex: number;
+  nextIndex: number;
+  isFirst: boolean;
+  isLast: boolean;
+};
+
 export type TimerCardPrintLayout = {
   title: string;
   seedLabel: string;
@@ -349,6 +363,61 @@ export function formatTimerCardPrintLayout(
       action: actionLines[index],
     })),
   };
+}
+
+export function resolveFacilitatorTimerPhase(
+  result: StoryDiceResult,
+  phaseIndex: number,
+  options: FacilitatorAgendaOptions = {},
+): FacilitatorTimerPhaseState {
+  const totalMinutes = options.totalMinutes ?? 25;
+  const minutes = scaleAgendaMinutes(totalMinutes);
+  const currentIndex = clampInteger(phaseIndex, 0, agendaPhases.length - 1);
+  const phase = agendaPhases[currentIndex];
+
+  return {
+    currentIndex,
+    totalPhases: agendaPhases.length,
+    phaseLabel: `Phase ${currentIndex + 1} of ${agendaPhases.length}`,
+    name: phase.name,
+    minutes: minutes[currentIndex],
+    prompt: phase.prompt,
+    action: timerCardActionLines(result)[currentIndex],
+    previousIndex: Math.max(0, currentIndex - 1),
+    nextIndex: Math.min(agendaPhases.length - 1, currentIndex + 1),
+    isFirst: currentIndex === 0,
+    isLast: currentIndex === agendaPhases.length - 1,
+  };
+}
+
+export function formatFacilitatorTimerDisplay(
+  result: StoryDiceResult,
+  phaseIndex: number,
+  options: FacilitatorAgendaOptions = {},
+): string {
+  const title = options.title?.trim() || 'Live facilitator timer';
+  const phase = resolveFacilitatorTimerPhase(result, phaseIndex, options);
+  const previousDisabled = phase.isFirst ? ' disabled' : '';
+  const nextDisabled = phase.isLast ? ' disabled' : '';
+
+  return `<section class="facilitator-timer-display" aria-labelledby="facilitator-timer-title">
+    <div class="timer-display-header">
+      <h2 id="facilitator-timer-title">${escapeHtml(title)}</h2>
+      <p class="timer-display-seed">Seed: ${escapeHtml(result.seed)}</p>
+    </div>
+    <div class="timer-display-stage" aria-live="polite">
+      <p class="timer-display-phase">${escapeHtml(phase.phaseLabel)}</p>
+      <p class="timer-display-name">${escapeHtml(phase.name)}</p>
+      <p class="timer-display-minutes" aria-label="${phase.minutes} minutes">${phase.minutes}<span>min</span></p>
+      <p class="timer-display-prompt">${escapeHtml(phase.prompt)}</p>
+      <p class="timer-display-action">${escapeHtml(phase.action)}</p>
+    </div>
+    <div class="timer-display-actions">
+      <button id="timer-prev" type="button" aria-label="Show previous timer phase"${previousDisabled}>Previous</button>
+      <button id="timer-reset" type="button" aria-label="Reset timer display to first phase">Reset</button>
+      <button id="timer-next" type="button" aria-label="Show next timer phase"${nextDisabled}>Next</button>
+    </div>
+  </section>`;
 }
 
 export function formatSceneBeatOutline(result: StoryDiceResult): string {
@@ -724,6 +793,11 @@ function scaleAgendaMinutes(totalMinutes: number): number[] {
   }
 
   return scaled;
+}
+
+function clampInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
 function timerCardActionLines(result: StoryDiceResult): string[] {
