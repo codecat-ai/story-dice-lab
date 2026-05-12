@@ -28,6 +28,7 @@ import {
   normalizeRevisionCardsControls,
   normalizeWordBankJson,
   printCurrentPrompt,
+  resolveFacilitatorTimerPhase,
   rerollDie,
   rollDice,
   serializeWordBank,
@@ -35,6 +36,7 @@ import {
   type StoryDiceCategory,
   type StoryDiceWordBank,
 } from './storyDice';
+import { getKeyboardShortcutHelp, resolveKeyboardShortcut, type KeyboardShortcutAction } from './keyboardShortcuts';
 import {
   deleteWordBankPreset,
   formatWordBankPresetControls,
@@ -68,6 +70,8 @@ let timerPhaseIndex = 0;
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 let printTarget: 'prompt' | 'timer-cards' | 'revision-cards' | 'peer-role-cards' = 'prompt';
+let shortcutHelpVisible = false;
+let shortcutStatus = 'Keyboard shortcuts are available. Press ? or use the help button to view them.';
 
 function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
@@ -89,6 +93,7 @@ function render(): void {
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
         ${formatActionPlanControls(actionPlanOptions)}
         ${formatFacilitatorAgendaControls(agendaOptions)}
+        ${shortcutControls()}
       </section>
       <section class="dice-grid" aria-label="Story dice results">
         ${storyDiceCategories.map((category) => dieCard(category)).join('')}
@@ -139,13 +144,13 @@ function render(): void {
     seed = (event.target as HTMLInputElement).value;
   });
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
-    const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
-    result = rollDice(`${seed}:${Date.now()}`, preserved, currentWordBank);
-    timerPhaseIndex = 0;
-    render();
+    rerollUnlockedDice();
   });
   document.querySelector<HTMLButtonElement>('#copy')?.addEventListener('click', async () => {
     await copyText(formatCopySource(result, 'compact'));
+  });
+  document.querySelector<HTMLButtonElement>('#shortcut-help-toggle')?.addEventListener('click', () => {
+    toggleShortcutHelp();
   });
   document.querySelector<HTMLButtonElement>('#copy-outline')?.addEventListener('click', async () => {
     await copyText(formatCopySource(result, 'outline'));
@@ -348,6 +353,124 @@ function render(): void {
   }
 }
 
+document.addEventListener('keydown', (event) => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  const shortcut = resolveKeyboardShortcut({
+    key: event.key,
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    target: target
+      ? {
+          tagName: target.tagName,
+          isContentEditable: target.isContentEditable || Boolean(target.closest('[contenteditable="true"]')),
+        }
+      : null,
+  });
+  if (!shortcut) return;
+
+  event.preventDefault();
+  void runKeyboardShortcut(shortcut.action);
+});
+
+async function runKeyboardShortcut(action: KeyboardShortcutAction): Promise<void> {
+  if (action === 'rerollUnlockedDice') {
+    rerollUnlockedDice('Rerolled unlocked dice with keyboard shortcut r.');
+  } else if (action === 'toggleFocusedDieLock') {
+    toggleFocusedDieLock();
+  } else if (action === 'nextTimerPhase') {
+    showNextTimerPhase();
+  } else if (action === 'previousTimerPhase') {
+    showPreviousTimerPhase();
+  } else if (action === 'copyPrompt') {
+    await copyText(formatCopySource(result, 'compact'));
+    shortcutStatus = 'Copied current prompt with keyboard shortcut c.';
+    render();
+  } else {
+    toggleShortcutHelp();
+  }
+}
+
+function rerollUnlockedDice(status = 'Rerolled unlocked dice.'): void {
+  const preserved = Object.fromEntries([...locked].map((category) => [category, result.dice[category]]));
+  result = rollDice(`${seed}:${Date.now()}`, preserved, currentWordBank);
+  timerPhaseIndex = 0;
+  shortcutStatus = status;
+  render();
+}
+
+function toggleFocusedDieLock(): void {
+  const category = getFocusedDieCategory();
+  if (!category) {
+    shortcutStatus = 'Focus a die card or one of its controls before pressing l to toggle lock.';
+    render();
+    return;
+  }
+
+  if (locked.has(category)) {
+    locked.delete(category);
+    shortcutStatus = `Unlocked ${category} die with keyboard shortcut l.`;
+  } else {
+    locked.add(category);
+    shortcutStatus = `Locked ${category} die with keyboard shortcut l.`;
+  }
+  render();
+  focusDie(category);
+}
+
+function showNextTimerPhase(): void {
+  const phase = resolveFacilitatorTimerPhase(
+    result,
+    timerPhaseIndex,
+    normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+  );
+  timerPhaseIndex = phase.nextIndex;
+  const nextPhase = resolveFacilitatorTimerPhase(
+    result,
+    timerPhaseIndex,
+    normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+  );
+  shortcutStatus = `Timer phase: ${nextPhase.phaseLabel}, ${nextPhase.name}.`;
+  updateFacilitatorTimerDisplay();
+  updateShortcutStatus();
+}
+
+function showPreviousTimerPhase(): void {
+  const phase = resolveFacilitatorTimerPhase(
+    result,
+    timerPhaseIndex,
+    normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+  );
+  timerPhaseIndex = phase.previousIndex;
+  const previousPhase = resolveFacilitatorTimerPhase(
+    result,
+    timerPhaseIndex,
+    normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+  );
+  shortcutStatus = `Timer phase: ${previousPhase.phaseLabel}, ${previousPhase.name}.`;
+  updateFacilitatorTimerDisplay();
+  updateShortcutStatus();
+}
+
+function toggleShortcutHelp(): void {
+  shortcutHelpVisible = !shortcutHelpVisible;
+  shortcutStatus = shortcutHelpVisible ? 'Keyboard shortcuts help is visible.' : 'Keyboard shortcuts help is hidden.';
+  render();
+}
+
+function getFocusedDieCategory(): StoryDiceCategory | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement)) return null;
+
+  const category = active.closest<HTMLElement>('[data-die-category]')?.dataset.dieCategory;
+  return category && storyDiceCategories.includes(category as StoryDiceCategory) ? (category as StoryDiceCategory) : null;
+}
+
+function focusDie(category: StoryDiceCategory): void {
+  document.querySelector<HTMLElement>(`[data-die-category="${category}"]`)?.focus();
+}
+
 function setPrintTarget(): void {
   document.querySelector('.shell')?.classList.toggle('print-timer-cards', printTarget === 'timer-cards');
   document.querySelector('.shell')?.classList.toggle('print-revision-cards', printTarget === 'revision-cards');
@@ -357,17 +480,38 @@ function setPrintTarget(): void {
 
 function wireFacilitatorTimerControls(): void {
   document.querySelector<HTMLButtonElement>('#timer-prev')?.addEventListener('click', () => {
-    timerPhaseIndex = Math.max(0, timerPhaseIndex - 1);
-    updateFacilitatorTimerDisplay();
+    showPreviousTimerPhase();
   });
   document.querySelector<HTMLButtonElement>('#timer-reset')?.addEventListener('click', () => {
     timerPhaseIndex = 0;
+    shortcutStatus = 'Timer phase reset to Phase 1 of 5, Warm-up.';
     updateFacilitatorTimerDisplay();
+    updateShortcutStatus();
   });
   document.querySelector<HTMLButtonElement>('#timer-next')?.addEventListener('click', () => {
-    timerPhaseIndex += 1;
-    updateFacilitatorTimerDisplay();
+    showNextTimerPhase();
   });
+}
+
+function shortcutControls(): string {
+  const expanded = shortcutHelpVisible ? 'true' : 'false';
+  const hidden = shortcutHelpVisible ? '' : ' hidden';
+  const helpItems = getKeyboardShortcutHelp()
+    .map(
+      (shortcut) => `<li><kbd>${escapeHtml(shortcut.key)}</kbd><span>${escapeHtml(shortcut.description)}</span></li>`,
+    )
+    .join('');
+
+  return `<div class="shortcut-controls" aria-labelledby="shortcut-controls-title">
+    <h2 id="shortcut-controls-title">Keyboard shortcuts</h2>
+    <button id="shortcut-help-toggle" type="button" aria-expanded="${expanded}" aria-controls="shortcut-help-panel">
+      ${shortcutHelpVisible ? 'Hide shortcuts' : 'Show shortcuts'}
+    </button>
+    <p id="shortcut-status" class="shortcut-status" aria-live="polite">${escapeHtml(shortcutStatus)}</p>
+    <div id="shortcut-help-panel" class="shortcut-help-panel"${hidden}>
+      <ul>${helpItems}</ul>
+    </div>
+  </div>`;
 }
 
 function printSheet(): string {
@@ -462,12 +606,12 @@ function peerRoleCardPrintSheet(options = normalizePeerRoleCardsControls(peerRol
 
 function dieCard(category: StoryDiceCategory): string {
   const checked = locked.has(category) ? 'checked' : '';
-  return `<article class="die-card">
+  return `<article class="die-card" data-die-category="${category}" tabindex="0" aria-label="${category} die: ${escapeHtml(result.dice[category])}">
     <p class="category">${category}</p>
     <h2>${escapeHtml(result.dice[category])}</h2>
     <div class="die-actions">
-      <button type="button" data-reroll="${category}">Reroll ${category}</button>
-      <label><input type="checkbox" data-lock="${category}" ${checked} /> Lock</label>
+      <button type="button" data-reroll="${category}" data-die-category="${category}">Reroll ${category}</button>
+      <label><input type="checkbox" data-lock="${category}" data-die-category="${category}" ${checked} /> Lock</label>
     </div>
   </article>`;
 }
@@ -499,6 +643,11 @@ function updateFacilitatorTimerDisplay(): void {
     normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
   );
   wireFacilitatorTimerControls();
+}
+
+function updateShortcutStatus(): void {
+  const status = document.querySelector<HTMLElement>('#shortcut-status');
+  if (status) status.textContent = shortcutStatus;
 }
 
 function updateActionPlanPreview(): void {
