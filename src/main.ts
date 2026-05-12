@@ -38,6 +38,11 @@ import {
 } from './storyDice';
 import { getKeyboardShortcutHelp, resolveKeyboardShortcut, type KeyboardShortcutAction } from './keyboardShortcuts';
 import {
+  applyClassroomSessionTemplate,
+  formatClassroomSessionTemplateControls,
+  listClassroomSessionTemplates,
+} from './classroomSessionTemplates';
+import {
   deleteWordBankPreset,
   formatWordBankPresetControls,
   listWordBankPresets,
@@ -57,6 +62,9 @@ seed = shared.seed;
 let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
+const classroomSessionTemplates = listClassroomSessionTemplates();
+let selectedClassroomTemplateId = classroomSessionTemplates[0]?.id ?? '';
+let classroomTemplateStatus = 'Choose a classroom template to prefill seed, word bank, and agenda timing.';
 let wordBankPresetName = '';
 let wordBankPresetNotes = '';
 let selectedWordBankPresetName = '';
@@ -88,6 +96,10 @@ function render(): void {
         <label class="seed-label">Seed
           <input id="seed" value="${escapeHtml(seed)}" aria-label="Prompt seed" />
         </label>
+        ${formatClassroomSessionTemplateControls(classroomSessionTemplates, {
+          selectedId: selectedClassroomTemplateId,
+          statusMessage: classroomTemplateStatus,
+        })}
         ${formatExportActionControls()}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
@@ -142,6 +154,25 @@ function render(): void {
 
   document.querySelector<HTMLInputElement>('#seed')?.addEventListener('input', (event) => {
     seed = (event.target as HTMLInputElement).value;
+  });
+  document.querySelector<HTMLSelectElement>('#template-select')?.addEventListener('change', (event) => {
+    selectedClassroomTemplateId = (event.target as HTMLSelectElement).value;
+  });
+  document.querySelector<HTMLButtonElement>('#apply-template')?.addEventListener('click', () => {
+    const applied = applyClassroomSessionTemplate(selectedClassroomTemplateId);
+    classroomTemplateStatus = applied.statusMessage;
+    if (applied.ok) {
+      seed = applied.seed;
+      currentWordBank = applied.wordBank;
+      wordBankText = applied.wordBankText;
+      agendaTitle = applied.agendaTitle;
+      agendaTotalMinutes = applied.agendaTotalMinutes;
+      timerPhaseIndex = applied.timerPhaseIndex;
+      locked.clear();
+      result = applied.result;
+      wordBankStatus = 'Using the classroom template word bank.';
+    }
+    render();
   });
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
     rerollUnlockedDice();

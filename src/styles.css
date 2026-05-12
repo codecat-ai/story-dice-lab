@@ -17,9 +17,14 @@ h1 { font-size: clamp(2.4rem, 8vw, 5rem); margin: 0; }
 input, select { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; }
 textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; resize: vertical; }
 .actions, .die-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1rem; }
-.agenda-controls, .revision-card-controls, .peer-role-card-controls, .action-plan-controls, .shortcut-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
-.agenda-controls h2, .revision-card-controls h2, .peer-role-card-controls h2, .action-plan-controls h2, .shortcut-controls h2 { margin: 0; font-size: 1.25rem; }
-.agenda-controls p, .revision-card-controls p, .peer-role-card-controls p, .action-plan-controls p, .shortcut-controls p { max-width: 42rem; }
+.template-controls, .agenda-controls, .revision-card-controls, .peer-role-card-controls, .action-plan-controls, .shortcut-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
+.template-controls h2, .agenda-controls h2, .revision-card-controls h2, .peer-role-card-controls h2, .action-plan-controls h2, .shortcut-controls h2 { margin: 0; font-size: 1.25rem; }
+.template-controls p, .agenda-controls p, .revision-card-controls p, .peer-role-card-controls p, .action-plan-controls p, .shortcut-controls p { max-width: 42rem; }
+.template-fields { display: grid; grid-template-columns: minmax(14rem, 32rem) auto; gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
+.template-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
+.template-list { display: grid; gap: 0.5rem; max-width: 60rem; margin: 0.75rem 0 0; padding-left: 1.2rem; }
+.template-list span { display: block; color: #68410d; }
+.template-status { min-height: 1.5rem; color: #68410d; font-weight: 800; }
 .agenda-fields { display: grid; grid-template-columns: minmax(14rem, 2fr) minmax(10rem, 1fr); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
 .revision-card-fields, .peer-role-card-fields, .action-plan-fields { display: grid; grid-template-columns: minmax(14rem, 32rem); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
 .agenda-field, .revision-card-field, .peer-role-card-field, .action-plan-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
@@ -96,7 +101,7 @@ kbd { min-width: 1.9rem; border: 2px solid #4f2f90; border-radius: 8px; padding:
 }
 
 @media (max-width: 640px) {
-  .agenda-fields, .revision-card-fields, .peer-role-card-fields, .action-plan-fields, .preset-fields { grid-template-columns: 1fr; }
+  .template-fields, .agenda-fields, .revision-card-fields, .peer-role-card-fields, .action-plan-fields, .preset-fields { grid-template-columns: 1fr; }
   .facilitator-timer-display { border-radius: 16px; }
   .timer-display-actions { display: grid; grid-template-columns: 1fr; }
 }
