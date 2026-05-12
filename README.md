@@ -32,6 +32,7 @@ Writers, teachers, and tabletop facilitators often need quick prompts that are p
 - Copy shareable URL hashes that restore the seed and locked dice.
 - Import a custom JSON word bank for the six dice categories and copy/export the normalized JSON.
 - Save, load, and delete named local word-bank presets with optional notes in browser storage for different classes, genres, or workshop groups.
+- Use visible keyboard shortcuts for live facilitation: `r` rerolls unlocked dice, `l` toggles the focused die lock, `[` and `]` move timer phases, `c` copies the current prompt, and `?` shows or hides shortcut help.
 - Accessible, keyboard-friendly controls.
 
 ## Installation
@@ -52,9 +53,11 @@ npm run dev
 
 Open the local Vite URL shown in the terminal.
 
+Press `?` or click **Show shortcuts** to display the live facilitation shortcut panel. Shortcuts are ignored while typing in form fields or when Ctrl, Meta, or Alt is pressed.
+
 ## Examples
 
-Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, use the large live timer display's **Previous**, **Reset**, and **Next** buttons when projecting the current phase, click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, click **Print timer-card layout** to print those phase cards with dashed cut lines, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Print revision-card layout** to print one cut-out revision card for each die/category, set the peer role-card title before clicking **Copy peer role cards** to assign small-group critique jobs, click **Print peer role-card layout** to print cut-out role cards, set the action-plan title before clicking **Copy action plan** to copy three critique-backed next steps, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
+Use the seed `moonlit workshop`, lock the setting, then reroll the other dice until the prompt fits your scene. Click **Copy outline** to copy a five-beat scene outline, click **Copy handout** to copy a printable workshop sheet, set the agenda title and total minutes before clicking **Copy agenda** to copy a scene sprint agenda for a teacher or writing-group facilitator, use the large live timer display's **Previous**, **Reset**, and **Next** buttons when projecting the current phase, or press `[` and `]` to step phases from the keyboard. Press `r` to reroll unlocked dice, focus a die card or one of its controls and press `l` to toggle that die lock, press `c` to copy the current prompt, and press `?` to show or hide shortcut help. Click **Copy timer cards** to copy per-phase timer cards using the same agenda settings, click **Print timer-card layout** to print those phase cards with dashed cut lines, set the revision-card title before clicking **Copy revision cards** to copy six peer-feedback cards for a second writing pass, click **Print revision-card layout** to print one cut-out revision card for each die/category, set the peer role-card title before clicking **Copy peer role cards** to assign small-group critique jobs, click **Print peer role-card layout** to print cut-out role cards, set the action-plan title before clicking **Copy action plan** to copy three critique-backed next steps, click **Copy Markdown** to copy a Markdown prompt for notes or issue threads, click **Print prompt sheet** to open the browser print flow for the current prompt, or click **Copy share link** to save or send a URL hash such as `#seed=moonlit+workshop&locked=setting`.
 
 The outline preview includes the seed and five beats: opening image, desire, complication, turning point, and ending hook. Together the beats reuse the character, want, setting, obstacle, object, and twist from the current roll.
 
@@ -103,12 +106,12 @@ npm run build
 
 ## Testing
 
-Behavior tests live in `tests/storyDice.test.ts` and `tests/wordBankPresets.test.ts`. They cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, large-type facilitator timer phase state and accessible display controls, classroom revision card export and printable revision-card cut-line layout with editable title controls, small-group peer role-card export and printable peer role-card cut-line layout with editable title controls, compact post-critique action-plan export with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, custom word-bank import/export, and local word-bank preset storage with optional notes.
+Behavior tests live in `tests/storyDice.test.ts`, `tests/wordBankPresets.test.ts`, and `tests/keyboardShortcuts.test.ts`. They cover deterministic rolls, lock behavior, single-die rerolls, prompt formatting, five-beat scene outline export, workshop handout export, facilitator agenda export, agenda timer-card export and printable timer-card cut-line layout, large-type facilitator timer phase state and accessible display controls, classroom revision card export and printable revision-card cut-line layout with editable title controls, small-group peer role-card export and printable peer role-card cut-line layout with editable title controls, compact post-critique action-plan export with editable title controls, time scaling and UI controls, Markdown prompt export, print-layout formatting, browser print triggering, custom word-bank import/export, local word-bank preset storage with optional notes, and pure keyboard shortcut mapping plus typing-field suppression.
 
 ## Roadmap
 
-- Add keyboard shortcuts for live facilitation actions such as reroll, lock, timer next phase, and copy.
 - Add importable classroom session templates that prefill seeds, timing, and word-bank presets for repeat workshops.
+- Add facilitator session snapshots that bundle current dice, timer phase, notes, and copied outputs for post-workshop review.
 
 ## Contributing
 
