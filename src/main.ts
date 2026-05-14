@@ -50,6 +50,7 @@ import {
   saveWordBankPreset,
   type WordBankPreset,
 } from './wordBankPresets';
+import { formatSessionSnapshot, type SessionSnapshotArtifact } from './sessionSnapshot';
 import './styles.css';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -78,6 +79,8 @@ let timerPhaseIndex = 0;
 let result = rollDice(seed, {}, currentWordBank);
 const locked = shared.locked;
 let printTarget: 'prompt' | 'timer-cards' | 'revision-cards' | 'peer-role-cards' = 'prompt';
+type SnapshotArtifactId = 'outline' | 'handout' | 'agenda' | 'timerCards' | 'revisionCards' | 'peerRoleCards' | 'actionPlan';
+const selectedSnapshotArtifacts = new Set<SnapshotArtifactId>(['agenda', 'actionPlan']);
 let shortcutHelpVisible = false;
 let shortcutStatus = 'Keyboard shortcuts are available. Press ? or use the help button to view them.';
 
@@ -101,6 +104,7 @@ function render(): void {
           statusMessage: classroomTemplateStatus,
         })}
         ${formatExportActionControls()}
+        ${snapshotControls()}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
         ${formatActionPlanControls(actionPlanOptions)}
@@ -188,6 +192,19 @@ function render(): void {
   });
   document.querySelector<HTMLButtonElement>('#copy-handout')?.addEventListener('click', async () => {
     await copyText(formatCopySource(result, 'handout'));
+  });
+  document.querySelector<HTMLButtonElement>('#copy-session-snapshot')?.addEventListener('click', async () => {
+    await copyText(formatCurrentSessionSnapshot());
+    shortcutStatus = 'Copied session snapshot.';
+    render();
+  });
+  document.querySelectorAll<HTMLInputElement>('[data-snapshot-artifact]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      const artifactId = checkbox.dataset.snapshotArtifact as SnapshotArtifactId | undefined;
+      if (!artifactId) return;
+      if (checkbox.checked) selectedSnapshotArtifacts.add(artifactId);
+      else selectedSnapshotArtifacts.delete(artifactId);
+    });
   });
   document.querySelector<HTMLButtonElement>('#copy-revision-cards')?.addEventListener('click', async () => {
     await copyText(formatRevisionCards(result, normalizeRevisionCardsControls(revisionCardsTitle)));
@@ -545,6 +562,33 @@ function shortcutControls(): string {
   </div>`;
 }
 
+function snapshotControls(): string {
+  const artifactOptions: { id: SnapshotArtifactId; label: string }[] = [
+    { id: 'outline', label: 'Outline' },
+    { id: 'handout', label: 'Handout' },
+    { id: 'agenda', label: 'Agenda' },
+    { id: 'timerCards', label: 'Timer cards' },
+    { id: 'revisionCards', label: 'Revision cards' },
+    { id: 'peerRoleCards', label: 'Peer role cards' },
+    { id: 'actionPlan', label: 'Action plan' },
+  ];
+
+  return `<div class="snapshot-controls" aria-labelledby="snapshot-controls-title">
+    <h2 id="snapshot-controls-title">Session snapshot</h2>
+    <p id="snapshot-help">Bundle the current dice, timer phase, preset notes, and selected classroom artifacts as Markdown.</p>
+    <fieldset aria-describedby="snapshot-help">
+      <legend>Artifact excerpts</legend>
+      ${artifactOptions
+        .map((option) => {
+          const checked = selectedSnapshotArtifacts.has(option.id) ? ' checked' : '';
+          return `<label><input type="checkbox" data-snapshot-artifact="${option.id}"${checked} /> ${escapeHtml(option.label)}</label>`;
+        })
+        .join('')}
+    </fieldset>
+    <button id="copy-session-snapshot" type="button">Copy session snapshot</button>
+  </div>`;
+}
+
 function printSheet(): string {
   const sheet = formatPrintSheet(result);
 
@@ -686,6 +730,47 @@ function updateActionPlanPreview(): void {
   if (preview) {
     preview.textContent = formatRevisionActionPlan(result, normalizeActionPlanControls(actionPlanTitle));
   }
+}
+
+function formatCurrentSessionSnapshot(): string {
+  const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
+  const timer = resolveFacilitatorTimerPhase(result, timerPhaseIndex, agendaOptions);
+  const presetName = wordBankPresetName || selectedWordBankPresetName;
+
+  return formatSessionSnapshot({
+    dateLabel: new Date().toLocaleString(),
+    result,
+    timer: {
+      phaseLabel: timer.phaseLabel,
+      name: timer.name,
+      minutes: timer.minutes,
+      action: timer.action,
+    },
+    preset: {
+      name: presetName,
+      notes: wordBankPresetNotes,
+    },
+    artifacts: selectedSessionSnapshotArtifacts(agendaOptions),
+  });
+}
+
+function selectedSessionSnapshotArtifacts(
+  agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes),
+): SessionSnapshotArtifact[] {
+  const revisionOptions = normalizeRevisionCardsControls(revisionCardsTitle);
+  const peerRoleOptions = normalizePeerRoleCardsControls(peerRoleCardsTitle);
+  const actionPlanOptions = normalizeActionPlanControls(actionPlanTitle);
+  const artifacts: Record<SnapshotArtifactId, SessionSnapshotArtifact> = {
+    outline: { label: 'Scene beat outline', content: formatSceneBeatOutline(result) },
+    handout: { label: 'Workshop handout', content: formatHandout(result) },
+    agenda: { label: 'Facilitator agenda', content: formatFacilitatorAgenda(result, agendaOptions) },
+    timerCards: { label: 'Timer cards', content: formatTimerCards(result, agendaOptions) },
+    revisionCards: { label: 'Revision cards', content: formatRevisionCards(result, revisionOptions) },
+    peerRoleCards: { label: 'Peer role cards', content: formatPeerRoleCards(result, peerRoleOptions) },
+    actionPlan: { label: 'Action plan', content: formatRevisionActionPlan(result, actionPlanOptions) },
+  };
+
+  return [...selectedSnapshotArtifacts].map((artifactId) => artifacts[artifactId]);
 }
 
 function readWordBankPresets(): WordBankPreset[] {
