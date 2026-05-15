@@ -51,6 +51,14 @@ import {
   type WordBankPreset,
 } from './wordBankPresets';
 import { formatSessionSnapshot, type SessionSnapshotArtifact } from './sessionSnapshot';
+import {
+  clearSessionHistory,
+  formatSessionHistoryControls,
+  formatSessionHistoryList,
+  loadSessionHistory,
+  saveSessionSnapshotToHistory,
+  type SessionHistoryItem,
+} from './sessionHistory';
 import './styles.css';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -83,6 +91,9 @@ type SnapshotArtifactId = 'outline' | 'handout' | 'agenda' | 'timerCards' | 'rev
 const selectedSnapshotArtifacts = new Set<SnapshotArtifactId>(['agenda', 'actionPlan']);
 let shortcutHelpVisible = false;
 let shortcutStatus = 'Keyboard shortcuts are available. Press ? or use the help button to view them.';
+let sessionHistoryItems: SessionHistoryItem[] = [];
+let sessionHistoryStatus = 'No local session snapshots saved yet.';
+refreshSessionHistory();
 
 function render(): void {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
@@ -105,6 +116,7 @@ function render(): void {
         })}
         ${formatExportActionControls()}
         ${snapshotControls()}
+        ${formatSessionHistoryControls(sessionHistoryItems, sessionHistoryStatus)}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
         ${formatActionPlanControls(actionPlanOptions)}
@@ -196,6 +208,28 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-session-snapshot')?.addEventListener('click', async () => {
     await copyText(formatCurrentSessionSnapshot());
     shortcutStatus = 'Copied session snapshot.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#save-session-history')?.addEventListener('click', () => {
+    const saveResult = saveSessionSnapshotToHistory(getSessionHistoryStorage(), {
+      title: formatSessionHistoryTitle(),
+      content: formatCurrentSessionSnapshot(),
+    });
+    sessionHistoryItems = saveResult.items;
+    sessionHistoryStatus = saveResult.ok
+      ? `Saved "${saveResult.item.title}" to local session history.`
+      : saveResult.warning;
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-session-history')?.addEventListener('click', async () => {
+    await copyText(formatSessionHistoryList(sessionHistoryItems));
+    sessionHistoryStatus = 'Copied local session history list.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#clear-session-history')?.addEventListener('click', () => {
+    const clearResult = clearSessionHistory(getSessionHistoryStorage());
+    sessionHistoryItems = clearResult.items;
+    sessionHistoryStatus = clearResult.warning ?? 'Cleared local session history.';
     render();
   });
   document.querySelectorAll<HTMLInputElement>('[data-snapshot-artifact]').forEach((checkbox) => {
@@ -778,7 +812,27 @@ function readWordBankPresets(): WordBankPreset[] {
   return storage ? listWordBankPresets(storage) : [];
 }
 
+function refreshSessionHistory(): void {
+  const result = loadSessionHistory(getSessionHistoryStorage());
+  sessionHistoryItems = result.items;
+  sessionHistoryStatus =
+    result.warning ?? (result.items.length > 0 ? `${result.items.length} local session snapshots saved.` : sessionHistoryStatus);
+}
+
+function formatSessionHistoryTitle(): string {
+  const firstLine = formatPrompt(result).split(/\r?\n/)[0] ?? '';
+  return firstLine ? `${firstLine} (${seed || 'untitled seed'})` : `Story Dice Lab session (${seed || 'untitled seed'})`;
+}
+
 function getWordBankPresetStorage(): Storage | null {
+  return getLocalStorage();
+}
+
+function getSessionHistoryStorage(): Storage | null {
+  return getLocalStorage();
+}
+
+function getLocalStorage(): Storage | null {
   try {
     return window.localStorage;
   } catch {

@@ -17,13 +17,17 @@ h1 { font-size: clamp(2.4rem, 8vw, 5rem); margin: 0; }
 input, select { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; }
 textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; border-radius: 14px; padding: 0.8rem; background: #fffaf1; resize: vertical; }
 .actions, .die-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1rem; }
-.template-controls, .snapshot-controls, .agenda-controls, .revision-card-controls, .peer-role-card-controls, .action-plan-controls, .shortcut-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
-.template-controls h2, .snapshot-controls h2, .agenda-controls h2, .revision-card-controls h2, .peer-role-card-controls h2, .action-plan-controls h2, .shortcut-controls h2 { margin: 0; font-size: 1.25rem; }
-.template-controls p, .snapshot-controls p, .agenda-controls p, .revision-card-controls p, .peer-role-card-controls p, .action-plan-controls p, .shortcut-controls p { max-width: 42rem; }
+.template-controls, .snapshot-controls, .session-history-controls, .agenda-controls, .revision-card-controls, .peer-role-card-controls, .action-plan-controls, .shortcut-controls { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px solid #ffffff88; }
+.template-controls h2, .snapshot-controls h2, .session-history-controls h2, .agenda-controls h2, .revision-card-controls h2, .peer-role-card-controls h2, .action-plan-controls h2, .shortcut-controls h2 { margin: 0; font-size: 1.25rem; }
+.template-controls p, .snapshot-controls p, .session-history-controls p, .agenda-controls p, .revision-card-controls p, .peer-role-card-controls p, .action-plan-controls p, .shortcut-controls p { max-width: 42rem; }
 .snapshot-controls fieldset { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; margin: 0 0 1rem; padding: 0; border: 0; }
 .snapshot-controls legend { width: 100%; margin-bottom: 0.25rem; font-weight: 800; }
 .snapshot-controls label { display: inline-flex; gap: 0.35rem; align-items: center; font-weight: 700; }
 .snapshot-controls input { width: auto; }
+.session-history-list { display: grid; gap: 0.45rem; max-width: 60rem; margin: 0.75rem 0 0; padding-left: 1.2rem; }
+.session-history-list li { padding-left: 0.2rem; }
+.session-history-list time { display: inline-block; margin-right: 0.45rem; color: #68410d; font-weight: 800; }
+.session-history-list span { font-weight: 700; }
 .template-fields { display: grid; grid-template-columns: minmax(14rem, 32rem) auto; gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
 .template-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .template-list { display: grid; gap: 0.5rem; max-width: 60rem; margin: 0.75rem 0 0; padding-left: 1.2rem; }
