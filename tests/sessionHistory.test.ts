@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   exportSessionHistoryJson,
+  filterSessionHistoryByTag,
   formatSessionHistoryControls,
   formatSessionHistoryList,
   importSessionHistoryFromJson,
   loadSessionHistory,
+  normalizeSessionHistoryTags,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   sessionHistoryStorageKey,
@@ -42,12 +44,38 @@ class ThrowingStorage {
 }
 
 describe("local session history", () => {
+  it("normalizes facilitator tags from comma and newline text with bounded unique values", () => {
+    expect(
+      normalizeSessionHistoryTags(
+        [
+          " Class 4A, cohort spring ",
+          "event night\nclass 4a\n",
+          "Genre Lab",
+          "   ",
+          "Very long facilitator tag that should be bounded",
+          "Event Night",
+          "one,two,three,four",
+        ],
+      ),
+    ).toEqual([
+      "Class 4A",
+      "cohort spring",
+      "event night",
+      "Genre Lab",
+      "Very long facilitator tag that",
+      "one",
+      "two",
+      "three",
+    ]);
+  });
+
   it("saves snapshots newest-first with stable ids and ISO timestamps", () => {
     const storage = new MemoryStorage();
 
     const first = saveSessionSnapshotToHistory(storage, {
       title: "Opening sprint",
       content: "# Snapshot one",
+      tags: "Class 4A, cohort spring",
       now: new Date("2026-05-15T09:00:00.000Z"),
     });
     const second = saveSessionSnapshotToHistory(storage, {
@@ -64,12 +92,39 @@ describe("local session history", () => {
         createdAt: "2026-05-15T09:05:00.000Z",
         title: "Share round",
         content: "# Snapshot two",
+        tags: [],
       },
       {
         id: "session-20260515T090000000Z-07c0315e",
         createdAt: "2026-05-15T09:00:00.000Z",
         title: "Opening sprint",
         content: "# Snapshot one",
+        tags: ["Class 4A", "cohort spring"],
+      },
+    ]);
+  });
+
+  it("loads legacy untagged stored snapshots with empty tags", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      sessionHistoryStorageKey,
+      JSON.stringify([
+        {
+          id: "legacy-session",
+          createdAt: "2026-05-15T09:00:00.000Z",
+          title: "Legacy",
+          content: "# Legacy",
+        },
+      ]),
+    );
+
+    expect(loadSessionHistory(storage).items).toEqual([
+      {
+        id: "legacy-session",
+        createdAt: "2026-05-15T09:00:00.000Z",
+        title: "Legacy",
+        content: "# Legacy",
+        tags: [],
       },
     ]);
   });
@@ -119,12 +174,14 @@ describe("local session history", () => {
         createdAt: "2026-05-15T09:05:00.000Z",
         title: "Share round",
         content: "# Snapshot two",
+        tags: ["Class 4A", "Festival"],
       },
       {
         id: "session-b",
         createdAt: "2026-05-15T09:00:00.000Z",
         title: "Opening sprint",
         content: "# Snapshot one",
+        tags: [],
       },
     ];
 
@@ -136,16 +193,59 @@ describe("local session history", () => {
       "id": "session-a",
       "createdAt": "2026-05-15T09:05:00.000Z",
       "title": "Share round",
-      "content": "# Snapshot two"
+      "content": "# Snapshot two",
+      "tags": [
+        "Class 4A",
+        "Festival"
+      ]
     },
     {
       "id": "session-b",
       "createdAt": "2026-05-15T09:00:00.000Z",
       "title": "Opening sprint",
-      "content": "# Snapshot one"
+      "content": "# Snapshot one",
+      "tags": []
     }
   ]
 }`);
+  });
+
+  it("imports and replaces history with validated normalized tags", () => {
+    const storage = new MemoryStorage();
+    const importJson = JSON.stringify({
+      schema: "story-dice-lab.session-history",
+      version: 1,
+      items: [
+        {
+          id: "incoming-a",
+          createdAt: "2026-05-15T09:00:00.000Z",
+          title: "Imported",
+          content: "# Imported",
+          tags: [" Class 4A ", "class 4a", "Event Night\nfestival", "", "x".repeat(40)],
+        },
+      ],
+    });
+
+    const result = replaceSessionHistoryFromJson(storage, importJson);
+
+    expect(result).toEqual({
+      ok: true,
+      items: [
+        {
+          id: "session-20260515T090000000Z-5dd3dfa2",
+          createdAt: "2026-05-15T09:00:00.000Z",
+          title: "Imported",
+          content: "# Imported",
+          tags: ["Class 4A", "Event Night", "festival", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+        },
+      ],
+    });
+    expect(loadSessionHistory(storage).items[0]?.tags).toEqual([
+      "Class 4A",
+      "Event Night",
+      "festival",
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ]);
   });
 
   it("imports validated history JSON through normal history ordering and max-10 rules", () => {
@@ -172,60 +272,70 @@ describe("local session history", () => {
           createdAt: "2026-05-15T09:11:00.000Z",
           title: "Session 11",
           content: "# Session 11",
+          tags: [],
         },
         {
           id: "session-20260515T091000000Z-6813e358",
           createdAt: "2026-05-15T09:10:00.000Z",
           title: "Session 10",
           content: "# Session 10",
+          tags: [],
         },
         {
           id: "session-20260515T090900000Z-18167ed0",
           createdAt: "2026-05-15T09:09:00.000Z",
           title: "Session 9",
           content: "# Session 9",
+          tags: [],
         },
         {
           id: "session-20260515T090800000Z-acf36b48",
           createdAt: "2026-05-15T09:08:00.000Z",
           title: "Session 8",
           content: "# Session 8",
+          tags: [],
         },
         {
           id: "session-20260515T090700000Z-948d73b4",
           createdAt: "2026-05-15T09:07:00.000Z",
           title: "Session 7",
           content: "# Session 7",
+          tags: [],
         },
         {
           id: "session-20260515T090600000Z-0ece3004",
           createdAt: "2026-05-15T09:06:00.000Z",
           title: "Session 6",
           content: "# Session 6",
+          tags: [],
         },
         {
           id: "session-20260515T090500000Z-7081d400",
           createdAt: "2026-05-15T09:05:00.000Z",
           title: "Session 5",
           content: "# Session 5",
+          tags: [],
         },
         {
           id: "session-20260515T090400000Z-93665028",
           createdAt: "2026-05-15T09:04:00.000Z",
           title: "Session 4",
           content: "# Session 4",
+          tags: [],
         },
         {
           id: "session-20260515T090300000Z-3887802c",
           createdAt: "2026-05-15T09:03:00.000Z",
           title: "Session 3",
           content: "# Session 3",
+          tags: [],
         },
         {
           id: "session-20260515T090200000Z-4acc98fc",
           createdAt: "2026-05-15T09:02:00.000Z",
           title: "Session 2",
           content: "# Session 2",
+          tags: [],
         },
       ],
     });
@@ -270,6 +380,7 @@ describe("local session history", () => {
         createdAt: "2026-05-15T09:00:00.000Z",
         title: "Imported",
         content: "# Imported",
+        tags: [],
       },
     ]);
 
@@ -283,6 +394,7 @@ describe("local session history", () => {
           createdAt: "2026-05-15T09:00:00.000Z",
           title: "Imported",
           content: "# Imported",
+          tags: [],
         },
       ],
     });
@@ -320,19 +432,24 @@ describe("local session history", () => {
         createdAt: "2026-05-15T09:05:00.000Z",
         title: "Share round",
         content: "# Snapshot two",
+        tags: ["Class 4A", "Festival"],
       },
       {
         id: "session-b",
         createdAt: "2026-05-15T09:00:00.000Z",
         title: "Opening sprint",
         content: "# Snapshot one",
+        tags: ["Cohort Spring"],
       },
     ];
 
     expect(formatSessionHistoryList(items)).toBe(`Story Dice Lab session history
 
-1. 2026-05-15T09:05:00.000Z - Share round
-2. 2026-05-15T09:00:00.000Z - Opening sprint`);
+1. 2026-05-15T09:05:00.000Z - Share round [Class 4A, Festival]
+2. 2026-05-15T09:00:00.000Z - Opening sprint [Cohort Spring]`);
+    expect(formatSessionHistoryList(filterSessionHistoryByTag(items, "class 4a"))).toBe(`Story Dice Lab session history
+
+1. 2026-05-15T09:05:00.000Z - Share round [Class 4A, Festival]`);
   });
 
   it("renders accessible save, copy, import, export, and clear controls with recent saved snapshots", () => {
@@ -343,9 +460,12 @@ describe("local session history", () => {
           createdAt: "2026-05-15T09:05:00.000Z",
           title: "Share round",
           content: "# Snapshot two",
+          tags: ["Class 4A", "Festival"],
         },
       ],
       "Saved session snapshot.",
+      "",
+      "class 4a",
     );
 
     expect(markup).toContain('aria-labelledby="session-history-title"');
@@ -355,6 +475,14 @@ describe("local session history", () => {
     expect(markup).toContain("Copy history list");
     expect(markup).toContain('id="copy-session-history-json"');
     expect(markup).toContain("Copy history JSON");
+    expect(markup).toContain('for="session-history-tags"');
+    expect(markup).toContain('id="session-history-tags"');
+    expect(markup).toContain("Snapshot tags");
+    expect(markup).toContain('for="session-history-tag-filter"');
+    expect(markup).toContain('id="session-history-tag-filter"');
+    expect(markup).toContain("Filter saved snapshots by tag");
+    expect(markup).toContain("All saved snapshots");
+    expect(markup).toContain('value="class 4a"');
     expect(markup).toContain('for="session-history-import-json"');
     expect(markup).toContain('id="session-history-import-json"');
     expect(markup).toContain('id="import-session-history"');
@@ -363,6 +491,8 @@ describe("local session history", () => {
     expect(markup).toContain("Clear history");
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("Share round");
+    expect(markup).toContain("Class 4A");
+    expect(markup).toContain("Festival");
     expect(markup).toContain("2026-05-15T09:05:00.000Z");
   });
 });

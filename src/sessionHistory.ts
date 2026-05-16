@@ -5,6 +5,7 @@ export type SessionHistoryItem = {
   createdAt: string;
   title: string;
   content: string;
+  tags: string[];
 };
 
 export type SessionHistoryStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -17,8 +18,11 @@ export type LoadSessionHistoryResult = {
 export type SaveSessionSnapshotInput = {
   title?: string;
   content: string;
+  tags?: SessionHistoryTagInput;
   now?: Date;
 };
+
+export type SessionHistoryTagInput = string | string[];
 
 export type SaveSessionHistoryResult =
   | {
@@ -45,6 +49,8 @@ export type ImportSessionHistoryResult =
     };
 
 const maxSessionHistoryItems = 10;
+const maxSessionHistoryTags = 8;
+const maxSessionHistoryTagLength = 32;
 const sessionHistoryExportSchema = "story-dice-lab.session-history";
 const sessionHistoryExportVersion = 1;
 const unavailableWarning = "Local session history is unavailable in this browser.";
@@ -66,7 +72,7 @@ export function loadSessionHistory(storage: SessionHistoryStorage | null): LoadS
       return { items: [], warning: unreadableWarning };
     }
 
-    return { items: parsed.filter(isSessionHistoryItem).slice(0, maxSessionHistoryItems) };
+    return { items: parsed.map(normalizeStoredSessionHistoryItem).filter(isPresent).slice(0, maxSessionHistoryItems) };
   } catch {
     try {
       storage.removeItem(sessionHistoryStorageKey);
@@ -96,6 +102,7 @@ export function saveSessionSnapshotToHistory(
     createdAt,
     title,
     content,
+    tags: normalizeSessionHistoryTags(input.tags ?? ""),
   };
   const items = [item, ...loaded.items].slice(0, maxSessionHistoryItems);
 
@@ -128,6 +135,34 @@ export function exportSessionHistoryJson(items: SessionHistoryItem[]): string {
     null,
     2,
   );
+}
+
+export function normalizeSessionHistoryTags(input: SessionHistoryTagInput): string[] {
+  const rawTags = Array.isArray(input) ? input : [input];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const rawTag of rawTags) {
+    for (const tagPart of rawTag.split(/[,\n]/)) {
+      const tag = boundSessionHistoryTag(tagPart.trim().replace(/\s+/g, " "));
+      if (!tag) continue;
+
+      const key = tag.toLocaleLowerCase();
+      if (seen.has(key)) continue;
+
+      seen.add(key);
+      tags.push(tag);
+      if (tags.length >= maxSessionHistoryTags) return tags;
+    }
+  }
+
+  return tags;
+}
+
+export function filterSessionHistoryByTag(items: SessionHistoryItem[], tag: string): SessionHistoryItem[] {
+  const normalizedTag = normalizeSessionHistoryTags(tag)[0]?.toLocaleLowerCase();
+  if (!normalizedTag) return items;
+  return items.filter((item) => item.tags.some((itemTag) => itemTag.toLocaleLowerCase() === normalizedTag));
 }
 
 export function importSessionHistoryFromJson(json: string): ImportSessionHistoryResult {
@@ -175,7 +210,7 @@ export function formatSessionHistoryList(items: SessionHistoryItem[]): string {
   return [
     "Story Dice Lab session history",
     "",
-    ...items.map((item, index) => `${index + 1}. ${item.createdAt} - ${item.title}`),
+    ...items.map((item, index) => `${index + 1}. ${item.createdAt} - ${item.title}${formatTagSuffix(item.tags)}`),
   ].join("\n");
 }
 
@@ -183,7 +218,10 @@ export function formatSessionHistoryControls(
   items: SessionHistoryItem[],
   statusMessage: string,
   importText = "",
+  tagInput = "",
+  selectedTagFilter = "",
 ): string {
+  const tagOptions = listSessionHistoryTags(items);
   const list =
     items.length > 0
       ? `<ol class="session-history-list">
@@ -192,6 +230,7 @@ export function formatSessionHistoryControls(
               (item) => `<li>
                 <time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time>
                 <span>${escapeHtml(item.title)}</span>
+                ${formatTagBadges(item.tags)}
               </li>`,
             )
             .join("")}
@@ -201,12 +240,25 @@ export function formatSessionHistoryControls(
   return `<div class="session-history-controls" aria-labelledby="session-history-title">
     <h2 id="session-history-title">Local session history</h2>
     <p id="session-history-help">Save up to 10 recent session snapshots in this browser before exporting or clearing them.</p>
+    <label class="session-history-tag-label" for="session-history-tags">Snapshot tags</label>
+    <input id="session-history-tags" value="${escapeHtml(tagInput)}" aria-describedby="session-history-tag-help" />
+    <p id="session-history-tag-help">Separate local facilitator tags with commas or new lines. Up to 8 tags are saved.</p>
     <div class="actions">
       <button id="save-session-history" type="button" aria-describedby="session-history-help">Save current snapshot</button>
       <button id="copy-session-history" type="button">Copy history list</button>
       <button id="copy-session-history-json" type="button">Copy history JSON</button>
       <button id="clear-session-history" type="button">Clear history</button>
     </div>
+    <label class="session-history-filter-label" for="session-history-tag-filter">Filter saved snapshots by tag</label>
+    <select id="session-history-tag-filter">
+      <option value="">All saved snapshots</option>
+      ${tagOptions
+        .map((tag) => {
+          const selected = tag.toLocaleLowerCase() === selectedTagFilter.toLocaleLowerCase() ? " selected" : "";
+          return `<option value="${escapeHtml(tag)}"${selected}>${escapeHtml(tag)}</option>`;
+        })
+        .join("")}
+    </select>
     <label class="session-history-import-label" for="session-history-import-json">Paste/import history JSON</label>
     <textarea id="session-history-import-json" rows="6" spellcheck="false" aria-describedby="session-history-import-help">${escapeHtml(importText)}</textarea>
     <p id="session-history-import-help">Import replaces the saved local history in this browser.</p>
@@ -237,6 +289,8 @@ function normalizeImportedSessionHistoryItem(value: unknown): SessionHistoryItem
   const createdAtDate = new Date(value.createdAt);
   if (Number.isNaN(createdAtDate.getTime()) || createdAtDate.toISOString() !== value.createdAt) return null;
   if (!value.content.trim()) return null;
+  const tags = readSessionHistoryTags(value.tags);
+  if (!tags) return null;
 
   const title = normalizeTitle(value.title);
   const content = value.content;
@@ -245,7 +299,14 @@ function normalizeImportedSessionHistoryItem(value: unknown): SessionHistoryItem
     createdAt: value.createdAt,
     title,
     content,
+    tags,
   };
+}
+
+function normalizeStoredSessionHistoryItem(value: unknown): SessionHistoryItem | null {
+  if (!isSessionHistoryItem(value)) return null;
+  const tags = readSessionHistoryTags(value.tags) ?? [];
+  return { ...value, tags };
 }
 
 function isSessionHistoryImportDocument(
@@ -278,6 +339,53 @@ function isSessionHistoryItem(value: unknown): value is SessionHistoryItem {
     typeof item.title === "string" &&
     typeof item.content === "string"
   );
+}
+
+function readSessionHistoryTags(value: unknown): string[] | null {
+  if (value === undefined) return [];
+  if (typeof value === "string") return normalizeSessionHistoryTags(value);
+  if (Array.isArray(value) && value.every((tag) => typeof tag === "string")) {
+    return normalizeSessionHistoryTags(value);
+  }
+  return null;
+}
+
+function isPresent<T>(value: T | null): value is T {
+  return value !== null;
+}
+
+function boundSessionHistoryTag(tag: string): string {
+  if (tag.length <= maxSessionHistoryTagLength) return tag;
+
+  const bounded = tag.slice(0, maxSessionHistoryTagLength).trim();
+  const lastSpace = bounded.lastIndexOf(" ");
+  if (lastSpace >= Math.floor(maxSessionHistoryTagLength * 0.75)) return bounded.slice(0, lastSpace);
+  return bounded;
+}
+
+function formatTagSuffix(tags: string[]): string {
+  return tags.length > 0 ? ` [${tags.join(", ")}]` : "";
+}
+
+function formatTagBadges(tags: string[]): string {
+  if (tags.length === 0) return "";
+  return `<span class="session-history-tags" aria-label="Tags">${tags
+    .map((tag) => `<span class="session-history-tag">${escapeHtml(tag)}</span>`)
+    .join("")}</span>`;
+}
+
+function listSessionHistoryTags(items: SessionHistoryItem[]): string[] {
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    for (const tag of item.tags) {
+      const key = tag.toLocaleLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      tags.push(tag);
+    }
+  }
+  return tags;
 }
 
 function escapeHtml(value: string): string {
