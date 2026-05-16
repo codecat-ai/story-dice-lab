@@ -50,7 +50,12 @@ import {
   saveWordBankPreset,
   type WordBankPreset,
 } from './wordBankPresets';
-import { formatSessionSnapshot, type SessionSnapshotArtifact } from './sessionSnapshot';
+import {
+  formatSessionSnapshot,
+  printSessionSnapshot,
+  type SessionSnapshotArtifact,
+  type SessionSnapshotOptions,
+} from './sessionSnapshot';
 import {
   clearSessionHistory,
   exportSessionHistoryJson,
@@ -211,6 +216,18 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-session-snapshot')?.addEventListener('click', async () => {
     await copyText(formatCurrentSessionSnapshot());
     shortcutStatus = 'Copied session snapshot.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#print-session-snapshot')?.addEventListener('click', () => {
+    const printWindow = window.open('', 'story-dice-lab-session-snapshot-print', 'popup,width=800,height=900');
+    if (!printWindow) {
+      shortcutStatus = 'Browser popup blocking prevented the session snapshot print view.';
+      render();
+      return;
+    }
+
+    printSessionSnapshot(printWindow, currentSessionSnapshotOptions());
+    shortcutStatus = 'Opened session snapshot print view.';
     render();
   });
   document.querySelector<HTMLButtonElement>('#save-session-history')?.addEventListener('click', () => {
@@ -631,7 +648,7 @@ function snapshotControls(): string {
 
   return `<div class="snapshot-controls" aria-labelledby="snapshot-controls-title">
     <h2 id="snapshot-controls-title">Session snapshot</h2>
-    <p id="snapshot-help">Bundle the current dice, timer phase, preset notes, and selected classroom artifacts as Markdown.</p>
+    <p id="snapshot-help">Bundle the current dice, timer phase, preset notes, and selected classroom artifacts as Markdown or a compact print sheet.</p>
     <fieldset aria-describedby="snapshot-help">
       <legend>Artifact excerpts</legend>
       ${artifactOptions
@@ -642,6 +659,7 @@ function snapshotControls(): string {
         .join('')}
     </fieldset>
     <button id="copy-session-snapshot" type="button">Copy session snapshot</button>
+    <button id="print-session-snapshot" type="button">Print session snapshot</button>
   </div>`;
 }
 
@@ -789,11 +807,15 @@ function updateActionPlanPreview(): void {
 }
 
 function formatCurrentSessionSnapshot(): string {
+  return formatSessionSnapshot(currentSessionSnapshotOptions());
+}
+
+function currentSessionSnapshotOptions(): SessionSnapshotOptions {
   const agendaOptions = normalizeFacilitatorAgendaControls(agendaTitle, agendaTotalMinutes);
   const timer = resolveFacilitatorTimerPhase(result, timerPhaseIndex, agendaOptions);
   const presetName = wordBankPresetName || selectedWordBankPresetName;
 
-  return formatSessionSnapshot({
+  return {
     dateLabel: new Date().toLocaleString(),
     result,
     timer: {
@@ -807,7 +829,7 @@ function formatCurrentSessionSnapshot(): string {
       notes: wordBankPresetNotes,
     },
     artifacts: selectedSessionSnapshotArtifacts(agendaOptions),
-  });
+  };
 }
 
 function selectedSessionSnapshotArtifacts(
