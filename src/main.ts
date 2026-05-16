@@ -104,6 +104,7 @@ let sessionHistoryStatus = 'No local session snapshots saved yet.';
 let sessionHistoryImportText = '';
 let sessionHistoryTagInput = '';
 let sessionHistoryTagFilter = '';
+let selectedSessionHistoryItemId = '';
 refreshSessionHistory();
 
 function render(): void {
@@ -133,6 +134,7 @@ function render(): void {
           sessionHistoryImportText,
           sessionHistoryTagInput,
           sessionHistoryTagFilter,
+          selectedSessionHistoryItemId,
         )}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
@@ -246,7 +248,10 @@ function render(): void {
       tags: sessionHistoryTagInput,
     });
     sessionHistoryItems = saveResult.items;
-    if (saveResult.ok) sessionHistoryTagFilter = '';
+    if (saveResult.ok) {
+      sessionHistoryTagFilter = '';
+      selectedSessionHistoryItemId = saveResult.item.id;
+    }
     sessionHistoryStatus = saveResult.ok
       ? `Saved "${saveResult.item.title}" to local session history.`
       : saveResult.warning;
@@ -269,6 +274,50 @@ function render(): void {
     sessionHistoryTagFilter = (event.target as HTMLSelectElement).value;
     render();
   });
+  document.querySelectorAll<HTMLButtonElement>('[data-session-history-detail-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      selectedSessionHistoryItemId = button.dataset.sessionHistoryDetailId ?? '';
+      sessionHistoryStatus = selectedSessionHistoryItemId
+        ? 'Selected saved snapshot details. The current roll was not changed.'
+        : sessionHistoryStatus;
+      render();
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-session-history-detail-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const item = findVisibleSessionHistoryItem(button.dataset.sessionHistoryDetailCopy);
+      if (!item) {
+        sessionHistoryStatus = 'That saved snapshot is not visible with the current history filter.';
+        render();
+        return;
+      }
+
+      await copyText(item.content);
+      sessionHistoryStatus = `Copied saved snapshot "${item.title}". The current roll was not changed.`;
+      render();
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-session-history-detail-print]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const item = findVisibleSessionHistoryItem(button.dataset.sessionHistoryDetailPrint);
+      if (!item) {
+        sessionHistoryStatus = 'That saved snapshot is not visible with the current history filter.';
+        render();
+        return;
+      }
+
+      const printWindow = window.open('', 'story-dice-lab-session-history-print', 'popup,width=800,height=900');
+      if (!printWindow) {
+        sessionHistoryStatus = 'Browser popup blocking prevented the saved snapshot print view.';
+        render();
+        return;
+      }
+
+      printSessionHistoryItem(printWindow, item);
+      sessionHistoryStatus = `Opened saved snapshot "${item.title}" print view. The current roll was not changed.`;
+      render();
+    });
+  });
   document.querySelector<HTMLTextAreaElement>('#session-history-import-json')?.addEventListener('input', (event) => {
     sessionHistoryImportText = (event.target as HTMLTextAreaElement).value;
   });
@@ -278,6 +327,7 @@ function render(): void {
       sessionHistoryItems = importResult.items;
       sessionHistoryImportText = '';
       sessionHistoryTagFilter = '';
+      selectedSessionHistoryItemId = '';
       sessionHistoryStatus = `Imported ${importResult.items.length} local session snapshots.`;
     } else {
       sessionHistoryStatus = importResult.warning;
@@ -288,6 +338,7 @@ function render(): void {
     const clearResult = clearSessionHistory(getSessionHistoryStorage());
     sessionHistoryItems = clearResult.items;
     sessionHistoryTagFilter = '';
+    selectedSessionHistoryItemId = '';
     sessionHistoryStatus = clearResult.warning ?? 'Cleared local session history.';
     render();
   });
@@ -890,6 +941,38 @@ function refreshSessionHistory(): void {
 function formatSessionHistoryTitle(): string {
   const firstLine = formatPrompt(result).split(/\r?\n/)[0] ?? '';
   return firstLine ? `${firstLine} (${seed || 'untitled seed'})` : `Story Dice Lab session (${seed || 'untitled seed'})`;
+}
+
+function findVisibleSessionHistoryItem(itemId: string | undefined): SessionHistoryItem | null {
+  if (!itemId) return null;
+  return visibleSessionHistoryItems().find((item) => item.id === itemId) ?? null;
+}
+
+function printSessionHistoryItem(target: Window, item: SessionHistoryItem): void {
+  const tags = item.tags.length > 0 ? item.tags.map(escapeHtml).join(', ') : 'No tags';
+  target.document.open();
+  target.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(item.title)} - Story Dice Lab saved snapshot</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2933; }
+    h1 { margin-bottom: 0.35rem; }
+    .meta { color: #52616b; margin: 0.25rem 0; }
+    pre { white-space: pre-wrap; border-top: 1px solid #d9e2ec; padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(item.title)}</h1>
+  <p class="meta">${escapeHtml(item.createdAt)}</p>
+  <p class="meta">Tags: ${tags}</p>
+  <pre>${escapeHtml(item.content)}</pre>
+</body>
+</html>`);
+  target.document.close();
+  target.focus?.();
+  target.print();
 }
 
 function getWordBankPresetStorage(): Storage | null {

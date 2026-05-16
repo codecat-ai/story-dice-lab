@@ -3,6 +3,7 @@ import {
   exportSessionHistoryJson,
   filterSessionHistoryByTag,
   formatSessionHistoryControls,
+  formatSessionHistoryDetailPanel,
   formatSessionHistoryList,
   importSessionHistoryFromJson,
   loadSessionHistory,
@@ -466,6 +467,8 @@ describe("local session history", () => {
       "Saved session snapshot.",
       "",
       "class 4a",
+      "",
+      "session-a",
     );
 
     expect(markup).toContain('aria-labelledby="session-history-title"');
@@ -494,5 +497,56 @@ describe("local session history", () => {
     expect(markup).toContain("Class 4A");
     expect(markup).toContain("Festival");
     expect(markup).toContain("2026-05-15T09:05:00.000Z");
+    expect(markup).toContain('data-session-history-detail-id="session-a"');
+    expect(markup).toContain("View details");
+    expect(markup).toContain('aria-controls="session-history-detail-panel"');
+    expect(markup).toContain('id="session-history-detail-panel"');
+    expect(markup).toContain('id="copy-session-history-detail-session-a"');
+    expect(markup).toContain('id="print-session-history-detail-session-a"');
+    expect(markup).toContain("# Snapshot two");
+  });
+
+  it("renders an escaped selected saved snapshot detail panel with keyed copy and print controls", () => {
+    const markup = formatSessionHistoryDetailPanel([
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: 'Share <round> "A"',
+        content: "# Snapshot <two>\nUse & revise.",
+        tags: ["Class <4A>", "Festival"],
+      },
+    ], "session-a");
+
+    expect(markup).toContain('id="session-history-detail-panel"');
+    expect(markup).toContain('aria-labelledby="session-history-detail-title-session-a"');
+    expect(markup).toContain('Share &lt;round&gt; &quot;A&quot;');
+    expect(markup).toContain('datetime="2026-05-15T09:05:00.000Z"');
+    expect(markup).toContain("Class &lt;4A&gt;");
+    expect(markup).toContain("Festival");
+    expect(markup).toContain("# Snapshot &lt;two&gt;\nUse &amp; revise.");
+    expect(markup).toContain('id="copy-session-history-detail-session-a"');
+    expect(markup).toContain('data-session-history-detail-copy="session-a"');
+    expect(markup).toContain('id="print-session-history-detail-session-a"');
+    expect(markup).toContain('data-session-history-detail-print="session-a"');
+  });
+
+  it("renders a friendly empty detail state when no selected snapshot is visible", () => {
+    expect(formatSessionHistoryDetailPanel([], "session-a")).toContain(
+      "Select a visible saved snapshot to review, copy, or print it without changing the current roll.",
+    );
+    expect(
+      formatSessionHistoryDetailPanel(
+        [
+          {
+            id: "session-a",
+            createdAt: "2026-05-15T09:05:00.000Z",
+            title: "Share round",
+            content: "# Snapshot two",
+            tags: [],
+          },
+        ],
+        "missing-session",
+      ),
+    ).toContain("That saved snapshot is not visible with the current history filter.");
   });
 });
