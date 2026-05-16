@@ -6,6 +6,7 @@ export type SessionHistoryItem = {
   title: string;
   content: string;
   tags: string[];
+  archiveLabel: SessionHistoryArchiveLabel;
 };
 
 export type SessionHistoryStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -19,10 +20,13 @@ export type SaveSessionSnapshotInput = {
   title?: string;
   content: string;
   tags?: SessionHistoryTagInput;
+  archiveLabel?: SessionHistoryArchiveLabelInput;
   now?: Date;
 };
 
 export type SessionHistoryTagInput = string | string[];
+export type SessionHistoryArchiveLabel = "" | "classroom" | "event" | "draft" | "assessment-follow-up";
+export type SessionHistoryArchiveLabelInput = SessionHistoryArchiveLabel | string | undefined;
 
 export type SaveSessionHistoryResult =
   | {
@@ -58,6 +62,8 @@ const unreadableWarning = "Session history could not be read, so it was reset.";
 const invalidJsonWarning = "History import must be valid JSON.";
 const unsupportedSchemaWarning = "History import uses an unsupported schema.";
 const malformedEntryWarning = "History import contains a malformed session entry.";
+
+export const archiveLabels = ["classroom", "event", "draft", "assessment-follow-up"] as const;
 
 export function loadSessionHistory(storage: SessionHistoryStorage | null): LoadSessionHistoryResult {
   if (!storage) return { items: [], warning: unavailableWarning };
@@ -103,6 +109,7 @@ export function saveSessionSnapshotToHistory(
     title,
     content,
     tags: normalizeSessionHistoryTags(input.tags ?? ""),
+    archiveLabel: normalizeSessionHistoryArchiveLabel(input.archiveLabel) ?? "",
   };
   const items = [item, ...loaded.items].slice(0, maxSessionHistoryItems);
 
@@ -159,10 +166,43 @@ export function normalizeSessionHistoryTags(input: SessionHistoryTagInput): stri
   return tags;
 }
 
+export function normalizeSessionHistoryArchiveLabel(input: unknown): SessionHistoryArchiveLabel | null {
+  if (input === undefined) return "";
+  if (typeof input !== "string") return null;
+
+  const normalized = input.trim().toLocaleLowerCase();
+  if (!normalized) return "";
+  return archiveLabels.includes(normalized as (typeof archiveLabels)[number])
+    ? (normalized as SessionHistoryArchiveLabel)
+    : null;
+}
+
+export function formatArchiveLabel(label: SessionHistoryArchiveLabel): string {
+  if (!label) return "No archive label";
+  if (label === "assessment-follow-up") return "Assessment follow-up";
+  return label.charAt(0).toLocaleUpperCase() + label.slice(1);
+}
+
 export function filterSessionHistoryByTag(items: SessionHistoryItem[], tag: string): SessionHistoryItem[] {
   const normalizedTag = normalizeSessionHistoryTags(tag)[0]?.toLocaleLowerCase();
   if (!normalizedTag) return items;
   return items.filter((item) => item.tags.some((itemTag) => itemTag.toLocaleLowerCase() === normalizedTag));
+}
+
+export function filterSessionHistoryByArchiveLabel(
+  items: SessionHistoryItem[],
+  archiveLabel: SessionHistoryArchiveLabelInput,
+): SessionHistoryItem[] {
+  const normalizedLabel = normalizeSessionHistoryArchiveLabel(archiveLabel);
+  if (!normalizedLabel) return items;
+  return items.filter((item) => item.archiveLabel === normalizedLabel);
+}
+
+export function filterSessionHistory(
+  items: SessionHistoryItem[],
+  filters: { tag?: string; archiveLabel?: SessionHistoryArchiveLabelInput },
+): SessionHistoryItem[] {
+  return filterSessionHistoryByArchiveLabel(filterSessionHistoryByTag(items, filters.tag ?? ""), filters.archiveLabel);
 }
 
 export function importSessionHistoryFromJson(json: string): ImportSessionHistoryResult {
@@ -210,7 +250,12 @@ export function formatSessionHistoryList(items: SessionHistoryItem[]): string {
   return [
     "Story Dice Lab session history",
     "",
-    ...items.map((item, index) => `${index + 1}. ${item.createdAt} - ${item.title}${formatTagSuffix(item.tags)}`),
+    ...items.map(
+      (item, index) =>
+        `${index + 1}. ${item.createdAt} - ${item.title}${formatTagSuffix(item.tags)}${formatArchiveLabelSuffix(
+          item.archiveLabel,
+        )}`,
+    ),
   ].join("\n");
 }
 
@@ -219,10 +264,14 @@ export function formatSessionHistoryControls(
   statusMessage: string,
   importText = "",
   tagInput = "",
+  selectedArchiveLabel: SessionHistoryArchiveLabelInput = "",
   selectedTagFilter = "",
+  selectedArchiveFilter: SessionHistoryArchiveLabelInput = "",
   selectedItemId = "",
 ): string {
   const tagOptions = listSessionHistoryTags(items);
+  const archiveLabelOptions = formatArchiveLabelOptions(selectedArchiveLabel);
+  const archiveFilterOptions = formatArchiveLabelOptions(selectedArchiveFilter, "All archive labels");
   const list =
     items.length > 0
       ? `<ol class="session-history-list">
@@ -232,6 +281,7 @@ export function formatSessionHistoryControls(
                 <time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time>
                 <span>${escapeHtml(item.title)}</span>
                 ${formatTagBadges(item.tags)}
+                ${formatArchiveLabelBadge(item.archiveLabel)}
                 <button
                   type="button"
                   data-session-history-detail-id="${escapeHtml(item.id)}"
@@ -249,6 +299,11 @@ export function formatSessionHistoryControls(
     <label class="session-history-tag-label" for="session-history-tags">Snapshot tags</label>
     <input id="session-history-tags" value="${escapeHtml(tagInput)}" aria-describedby="session-history-tag-help" />
     <p id="session-history-tag-help">Separate local facilitator tags with commas or new lines. Up to 8 tags are saved.</p>
+    <label class="session-history-archive-label" for="session-history-archive-label">Archive label</label>
+    <select id="session-history-archive-label" aria-describedby="session-history-archive-label-help">
+      ${archiveLabelOptions}
+    </select>
+    <p id="session-history-archive-label-help">Optionally mark this saved snapshot as classroom, event, draft, or assessment follow-up.</p>
     <div class="actions">
       <button id="save-session-history" type="button" aria-describedby="session-history-help">Save current snapshot</button>
       <button id="copy-session-history" type="button">Copy history list</button>
@@ -264,6 +319,10 @@ export function formatSessionHistoryControls(
           return `<option value="${escapeHtml(tag)}"${selected}>${escapeHtml(tag)}</option>`;
         })
         .join("")}
+    </select>
+    <label class="session-history-filter-label" for="session-history-archive-filter">Filter saved snapshots by archive label</label>
+    <select id="session-history-archive-filter">
+      ${archiveFilterOptions}
     </select>
     <label class="session-history-import-label" for="session-history-import-json">Paste/import history JSON</label>
     <textarea id="session-history-import-json" rows="6" spellcheck="false" aria-describedby="session-history-import-help">${escapeHtml(importText)}</textarea>
@@ -300,6 +359,7 @@ export function formatSessionHistoryDetailPanel(items: SessionHistoryItem[], sel
       <h3 id="session-history-detail-title-${escapedId}">${escapeHtml(item.title)}</h3>
       <p><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time></p>
       ${formatTagBadges(item.tags)}
+      ${formatArchiveLabelBadge(item.archiveLabel)}
       <div class="actions">
         <button id="copy-session-history-detail-${escapedId}" type="button" data-session-history-detail-copy="${escapedId}">Copy saved snapshot</button>
         <button id="print-session-history-detail-${escapedId}" type="button" data-session-history-detail-print="${escapedId}">Print saved snapshot</button>
@@ -331,6 +391,8 @@ function normalizeImportedSessionHistoryItem(value: unknown): SessionHistoryItem
   if (!value.content.trim()) return null;
   const tags = readSessionHistoryTags(value.tags);
   if (!tags) return null;
+  const archiveLabel = normalizeSessionHistoryArchiveLabel(value.archiveLabel);
+  if (archiveLabel === null) return null;
 
   const title = normalizeTitle(value.title);
   const content = value.content;
@@ -340,13 +402,15 @@ function normalizeImportedSessionHistoryItem(value: unknown): SessionHistoryItem
     title,
     content,
     tags,
+    archiveLabel,
   };
 }
 
 function normalizeStoredSessionHistoryItem(value: unknown): SessionHistoryItem | null {
   if (!isSessionHistoryItem(value)) return null;
   const tags = readSessionHistoryTags(value.tags) ?? [];
-  return { ...value, tags };
+  const archiveLabel = normalizeSessionHistoryArchiveLabel(value.archiveLabel) ?? "";
+  return { ...value, tags, archiveLabel };
 }
 
 function isSessionHistoryImportDocument(
@@ -407,11 +471,36 @@ function formatTagSuffix(tags: string[]): string {
   return tags.length > 0 ? ` [${tags.join(", ")}]` : "";
 }
 
+function formatArchiveLabelSuffix(label: SessionHistoryArchiveLabel): string {
+  return label ? ` (${formatArchiveLabel(label)})` : "";
+}
+
 function formatTagBadges(tags: string[]): string {
   if (tags.length === 0) return "";
   return `<span class="session-history-tags" aria-label="Tags">${tags
     .map((tag) => `<span class="session-history-tag">${escapeHtml(tag)}</span>`)
     .join("")}</span>`;
+}
+
+function formatArchiveLabelBadge(label: SessionHistoryArchiveLabel): string {
+  if (!label) return "";
+  return `<span class="session-history-archive-label-badge" aria-label="Archive label">${escapeHtml(
+    formatArchiveLabel(label),
+  )}</span>`;
+}
+
+function formatArchiveLabelOptions(
+  selectedLabel: SessionHistoryArchiveLabelInput,
+  emptyLabel = "No archive label",
+): string {
+  const normalized = normalizeSessionHistoryArchiveLabel(selectedLabel) ?? "";
+  return [
+    `<option value=""${normalized === "" ? " selected" : ""}>${escapeHtml(emptyLabel)}</option>`,
+    ...archiveLabels.map((label) => {
+      const selected = label === normalized ? " selected" : "";
+      return `<option value="${escapeHtml(label)}"${selected}>${escapeHtml(formatArchiveLabel(label))}</option>`;
+    }),
+  ].join("");
 }
 
 function listSessionHistoryTags(items: SessionHistoryItem[]): string[] {
