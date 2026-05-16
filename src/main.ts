@@ -59,6 +59,7 @@ import {
 import {
   clearSessionHistory,
   exportSessionHistoryJson,
+  filterSessionHistoryByTag,
   formatSessionHistoryControls,
   formatSessionHistoryList,
   loadSessionHistory,
@@ -101,6 +102,8 @@ let shortcutStatus = 'Keyboard shortcuts are available. Press ? or use the help 
 let sessionHistoryItems: SessionHistoryItem[] = [];
 let sessionHistoryStatus = 'No local session snapshots saved yet.';
 let sessionHistoryImportText = '';
+let sessionHistoryTagInput = '';
+let sessionHistoryTagFilter = '';
 refreshSessionHistory();
 
 function render(): void {
@@ -124,7 +127,13 @@ function render(): void {
         })}
         ${formatExportActionControls()}
         ${snapshotControls()}
-        ${formatSessionHistoryControls(sessionHistoryItems, sessionHistoryStatus, sessionHistoryImportText)}
+        ${formatSessionHistoryControls(
+          visibleSessionHistoryItems(),
+          sessionHistoryStatus,
+          sessionHistoryImportText,
+          sessionHistoryTagInput,
+          sessionHistoryTagFilter,
+        )}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
         ${formatActionPlanControls(actionPlanOptions)}
@@ -234,21 +243,30 @@ function render(): void {
     const saveResult = saveSessionSnapshotToHistory(getSessionHistoryStorage(), {
       title: formatSessionHistoryTitle(),
       content: formatCurrentSessionSnapshot(),
+      tags: sessionHistoryTagInput,
     });
     sessionHistoryItems = saveResult.items;
+    if (saveResult.ok) sessionHistoryTagFilter = '';
     sessionHistoryStatus = saveResult.ok
       ? `Saved "${saveResult.item.title}" to local session history.`
       : saveResult.warning;
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy-session-history')?.addEventListener('click', async () => {
-    await copyText(formatSessionHistoryList(sessionHistoryItems));
+    await copyText(formatSessionHistoryList(visibleSessionHistoryItems()));
     sessionHistoryStatus = 'Copied local session history list.';
     render();
   });
   document.querySelector<HTMLButtonElement>('#copy-session-history-json')?.addEventListener('click', async () => {
-    await copyText(exportSessionHistoryJson(sessionHistoryItems));
+    await copyText(exportSessionHistoryJson(visibleSessionHistoryItems()));
     sessionHistoryStatus = 'Copied local session history JSON.';
+    render();
+  });
+  document.querySelector<HTMLInputElement>('#session-history-tags')?.addEventListener('input', (event) => {
+    sessionHistoryTagInput = (event.target as HTMLInputElement).value;
+  });
+  document.querySelector<HTMLSelectElement>('#session-history-tag-filter')?.addEventListener('change', (event) => {
+    sessionHistoryTagFilter = (event.target as HTMLSelectElement).value;
     render();
   });
   document.querySelector<HTMLTextAreaElement>('#session-history-import-json')?.addEventListener('input', (event) => {
@@ -259,6 +277,7 @@ function render(): void {
     if (importResult.ok) {
       sessionHistoryItems = importResult.items;
       sessionHistoryImportText = '';
+      sessionHistoryTagFilter = '';
       sessionHistoryStatus = `Imported ${importResult.items.length} local session snapshots.`;
     } else {
       sessionHistoryStatus = importResult.warning;
@@ -268,6 +287,7 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#clear-session-history')?.addEventListener('click', () => {
     const clearResult = clearSessionHistory(getSessionHistoryStorage());
     sessionHistoryItems = clearResult.items;
+    sessionHistoryTagFilter = '';
     sessionHistoryStatus = clearResult.warning ?? 'Cleared local session history.';
     render();
   });
@@ -661,6 +681,10 @@ function snapshotControls(): string {
     <button id="copy-session-snapshot" type="button">Copy session snapshot</button>
     <button id="print-session-snapshot" type="button">Print session snapshot</button>
   </div>`;
+}
+
+function visibleSessionHistoryItems(): SessionHistoryItem[] {
+  return filterSessionHistoryByTag(sessionHistoryItems, sessionHistoryTagFilter);
 }
 
 function printSheet(): string {
