@@ -53,9 +53,11 @@ import {
 import { formatSessionSnapshot, type SessionSnapshotArtifact } from './sessionSnapshot';
 import {
   clearSessionHistory,
+  exportSessionHistoryJson,
   formatSessionHistoryControls,
   formatSessionHistoryList,
   loadSessionHistory,
+  replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   type SessionHistoryItem,
 } from './sessionHistory';
@@ -93,6 +95,7 @@ let shortcutHelpVisible = false;
 let shortcutStatus = 'Keyboard shortcuts are available. Press ? or use the help button to view them.';
 let sessionHistoryItems: SessionHistoryItem[] = [];
 let sessionHistoryStatus = 'No local session snapshots saved yet.';
+let sessionHistoryImportText = '';
 refreshSessionHistory();
 
 function render(): void {
@@ -116,7 +119,7 @@ function render(): void {
         })}
         ${formatExportActionControls()}
         ${snapshotControls()}
-        ${formatSessionHistoryControls(sessionHistoryItems, sessionHistoryStatus)}
+        ${formatSessionHistoryControls(sessionHistoryItems, sessionHistoryStatus, sessionHistoryImportText)}
         ${formatRevisionCardsControls(revisionCardsOptions)}
         ${formatPeerRoleCardsControls(peerRoleCardsOptions)}
         ${formatActionPlanControls(actionPlanOptions)}
@@ -224,6 +227,25 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-session-history')?.addEventListener('click', async () => {
     await copyText(formatSessionHistoryList(sessionHistoryItems));
     sessionHistoryStatus = 'Copied local session history list.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-session-history-json')?.addEventListener('click', async () => {
+    await copyText(exportSessionHistoryJson(sessionHistoryItems));
+    sessionHistoryStatus = 'Copied local session history JSON.';
+    render();
+  });
+  document.querySelector<HTMLTextAreaElement>('#session-history-import-json')?.addEventListener('input', (event) => {
+    sessionHistoryImportText = (event.target as HTMLTextAreaElement).value;
+  });
+  document.querySelector<HTMLButtonElement>('#import-session-history')?.addEventListener('click', () => {
+    const importResult = replaceSessionHistoryFromJson(getSessionHistoryStorage(), sessionHistoryImportText);
+    if (importResult.ok) {
+      sessionHistoryItems = importResult.items;
+      sessionHistoryImportText = '';
+      sessionHistoryStatus = `Imported ${importResult.items.length} local session snapshots.`;
+    } else {
+      sessionHistoryStatus = importResult.warning;
+    }
     render();
   });
   document.querySelector<HTMLButtonElement>('#clear-session-history')?.addEventListener('click', () => {

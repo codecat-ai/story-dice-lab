@@ -28,6 +28,7 @@ textarea { box-sizing: border-box; width: 100%; border: 2px solid #4f2f90; borde
 .session-history-list li { padding-left: 0.2rem; }
 .session-history-list time { display: inline-block; margin-right: 0.45rem; color: #68410d; font-weight: 800; }
 .session-history-list span { font-weight: 700; }
+.session-history-import-label { display: block; margin: 1rem 0 0.4rem; font-weight: 700; }
 .template-fields { display: grid; grid-template-columns: minmax(14rem, 32rem) auto; gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
 .template-field { display: block; margin-bottom: 0.4rem; font-weight: 700; }
 .template-list { display: grid; gap: 0.5rem; max-width: 60rem; margin: 0.75rem 0 0; padding-left: 1.2rem; }

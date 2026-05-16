@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  exportSessionHistoryJson,
   formatSessionHistoryControls,
   formatSessionHistoryList,
+  importSessionHistoryFromJson,
   loadSessionHistory,
+  replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   sessionHistoryStorageKey,
   type SessionHistoryItem,
@@ -109,6 +112,188 @@ describe("local session history", () => {
     expect(storage.getItem(sessionHistoryStorageKey)).toBeNull();
   });
 
+  it("exports deterministic pretty JSON with a schema marker", () => {
+    const items: SessionHistoryItem[] = [
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: "Share round",
+        content: "# Snapshot two",
+      },
+      {
+        id: "session-b",
+        createdAt: "2026-05-15T09:00:00.000Z",
+        title: "Opening sprint",
+        content: "# Snapshot one",
+      },
+    ];
+
+    expect(exportSessionHistoryJson(items)).toBe(`{
+  "schema": "story-dice-lab.session-history",
+  "version": 1,
+  "items": [
+    {
+      "id": "session-a",
+      "createdAt": "2026-05-15T09:05:00.000Z",
+      "title": "Share round",
+      "content": "# Snapshot two"
+    },
+    {
+      "id": "session-b",
+      "createdAt": "2026-05-15T09:00:00.000Z",
+      "title": "Opening sprint",
+      "content": "# Snapshot one"
+    }
+  ]
+}`);
+  });
+
+  it("imports validated history JSON through normal history ordering and max-10 rules", () => {
+    const items = Array.from({ length: 12 }, (_, index) => ({
+      id: `incoming-${index}`,
+      createdAt: new Date(Date.UTC(2026, 4, 15, 9, index)).toISOString(),
+      title: `  Session   ${index}  `,
+      content: `# Session ${index}`,
+    }));
+
+    const result = importSessionHistoryFromJson(
+      JSON.stringify({
+        schema: "story-dice-lab.session-history",
+        version: 1,
+        items,
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      items: [
+        {
+          id: "session-20260515T091100000Z-1618fb06",
+          createdAt: "2026-05-15T09:11:00.000Z",
+          title: "Session 11",
+          content: "# Session 11",
+        },
+        {
+          id: "session-20260515T091000000Z-6813e358",
+          createdAt: "2026-05-15T09:10:00.000Z",
+          title: "Session 10",
+          content: "# Session 10",
+        },
+        {
+          id: "session-20260515T090900000Z-18167ed0",
+          createdAt: "2026-05-15T09:09:00.000Z",
+          title: "Session 9",
+          content: "# Session 9",
+        },
+        {
+          id: "session-20260515T090800000Z-acf36b48",
+          createdAt: "2026-05-15T09:08:00.000Z",
+          title: "Session 8",
+          content: "# Session 8",
+        },
+        {
+          id: "session-20260515T090700000Z-948d73b4",
+          createdAt: "2026-05-15T09:07:00.000Z",
+          title: "Session 7",
+          content: "# Session 7",
+        },
+        {
+          id: "session-20260515T090600000Z-0ece3004",
+          createdAt: "2026-05-15T09:06:00.000Z",
+          title: "Session 6",
+          content: "# Session 6",
+        },
+        {
+          id: "session-20260515T090500000Z-7081d400",
+          createdAt: "2026-05-15T09:05:00.000Z",
+          title: "Session 5",
+          content: "# Session 5",
+        },
+        {
+          id: "session-20260515T090400000Z-93665028",
+          createdAt: "2026-05-15T09:04:00.000Z",
+          title: "Session 4",
+          content: "# Session 4",
+        },
+        {
+          id: "session-20260515T090300000Z-3887802c",
+          createdAt: "2026-05-15T09:03:00.000Z",
+          title: "Session 3",
+          content: "# Session 3",
+        },
+        {
+          id: "session-20260515T090200000Z-4acc98fc",
+          createdAt: "2026-05-15T09:02:00.000Z",
+          title: "Session 2",
+          content: "# Session 2",
+        },
+      ],
+    });
+  });
+
+  it("rejects malformed history imports with friendly errors", () => {
+    expect(importSessionHistoryFromJson("{not json")).toEqual({
+      ok: false,
+      items: [],
+      warning: "History import must be valid JSON.",
+    });
+    expect(importSessionHistoryFromJson(JSON.stringify({ schema: "wrong", version: 1, items: [] }))).toEqual({
+      ok: false,
+      items: [],
+      warning: "History import uses an unsupported schema.",
+    });
+    expect(
+      importSessionHistoryFromJson(
+        JSON.stringify({
+          schema: "story-dice-lab.session-history",
+          version: 1,
+          items: [{ id: "bad", createdAt: "not-a-date", title: "Bad", content: "# Bad" }],
+        }),
+      ),
+    ).toEqual({
+      ok: false,
+      items: [],
+      warning: "History import contains a malformed session entry.",
+    });
+  });
+
+  it("replaces stored history on import without appending and stays safe when storage is unavailable", () => {
+    const storage = new MemoryStorage();
+    saveSessionSnapshotToHistory(storage, {
+      title: "Existing",
+      content: "# Existing",
+      now: new Date("2026-05-15T08:00:00.000Z"),
+    });
+    const importJson = exportSessionHistoryJson([
+      {
+        id: "incoming-a",
+        createdAt: "2026-05-15T09:00:00.000Z",
+        title: "Imported",
+        content: "# Imported",
+      },
+    ]);
+
+    const result = replaceSessionHistoryFromJson(storage, importJson);
+
+    expect(result).toEqual({
+      ok: true,
+      items: [
+        {
+          id: "session-20260515T090000000Z-5dd3dfa2",
+          createdAt: "2026-05-15T09:00:00.000Z",
+          title: "Imported",
+          content: "# Imported",
+        },
+      ],
+    });
+    expect(loadSessionHistory(storage).items.map((item) => item.title)).toEqual(["Imported"]);
+    expect(replaceSessionHistoryFromJson(new ThrowingStorage(), importJson)).toEqual({
+      ok: false,
+      items: [],
+      warning: "Local session history is unavailable in this browser.",
+    });
+  });
+
   it("falls back cleanly when storage is unavailable", () => {
     const loadResult = loadSessionHistory(null);
     const saveResult = saveSessionSnapshotToHistory(new ThrowingStorage(), {
@@ -150,7 +335,7 @@ describe("local session history", () => {
 2. 2026-05-15T09:00:00.000Z - Opening sprint`);
   });
 
-  it("renders accessible save, copy, and clear controls with recent saved snapshots", () => {
+  it("renders accessible save, copy, import, export, and clear controls with recent saved snapshots", () => {
     const markup = formatSessionHistoryControls(
       [
         {
@@ -168,6 +353,12 @@ describe("local session history", () => {
     expect(markup).toContain("Save current snapshot");
     expect(markup).toContain('id="copy-session-history"');
     expect(markup).toContain("Copy history list");
+    expect(markup).toContain('id="copy-session-history-json"');
+    expect(markup).toContain("Copy history JSON");
+    expect(markup).toContain('for="session-history-import-json"');
+    expect(markup).toContain('id="session-history-import-json"');
+    expect(markup).toContain('id="import-session-history"');
+    expect(markup).toContain("Import history");
     expect(markup).toContain('id="clear-session-history"');
     expect(markup).toContain("Clear history");
     expect(markup).toContain('aria-live="polite"');
