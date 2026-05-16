@@ -33,9 +33,25 @@ export type SaveSessionHistoryResult =
       warning: string;
     };
 
+export type ImportSessionHistoryResult =
+  | {
+      ok: true;
+      items: SessionHistoryItem[];
+    }
+  | {
+      ok: false;
+      items: SessionHistoryItem[];
+      warning: string;
+    };
+
 const maxSessionHistoryItems = 10;
+const sessionHistoryExportSchema = "story-dice-lab.session-history";
+const sessionHistoryExportVersion = 1;
 const unavailableWarning = "Local session history is unavailable in this browser.";
 const unreadableWarning = "Session history could not be read, so it was reset.";
+const invalidJsonWarning = "History import must be valid JSON.";
+const unsupportedSchemaWarning = "History import uses an unsupported schema.";
+const malformedEntryWarning = "History import contains a malformed session entry.";
 
 export function loadSessionHistory(storage: SessionHistoryStorage | null): LoadSessionHistoryResult {
   if (!storage) return { items: [], warning: unavailableWarning };
@@ -102,6 +118,57 @@ export function clearSessionHistory(storage: SessionHistoryStorage | null): Load
   }
 }
 
+export function exportSessionHistoryJson(items: SessionHistoryItem[]): string {
+  return JSON.stringify(
+    {
+      schema: sessionHistoryExportSchema,
+      version: sessionHistoryExportVersion,
+      items,
+    },
+    null,
+    2,
+  );
+}
+
+export function importSessionHistoryFromJson(json: string): ImportSessionHistoryResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { ok: false, items: [], warning: invalidJsonWarning };
+  }
+
+  if (!isSessionHistoryImportDocument(parsed)) {
+    return { ok: false, items: [], warning: unsupportedSchemaWarning };
+  }
+
+  const items: SessionHistoryItem[] = [];
+  for (const item of parsed.items) {
+    const normalized = normalizeImportedSessionHistoryItem(item);
+    if (!normalized) return { ok: false, items: [], warning: malformedEntryWarning };
+    items.push(normalized);
+  }
+
+  return { ok: true, items: sortAndLimitSessionHistory(items) };
+}
+
+export function replaceSessionHistoryFromJson(
+  storage: SessionHistoryStorage | null,
+  json: string,
+): ImportSessionHistoryResult {
+  if (!storage) return { ok: false, items: [], warning: unavailableWarning };
+
+  const imported = importSessionHistoryFromJson(json);
+  if (!imported.ok) return imported;
+
+  try {
+    storage.setItem(sessionHistoryStorageKey, JSON.stringify(imported.items));
+    return imported;
+  } catch {
+    return { ok: false, items: [], warning: unavailableWarning };
+  }
+}
+
 export function formatSessionHistoryList(items: SessionHistoryItem[]): string {
   if (items.length === 0) return "Story Dice Lab session history\n\nNo saved session snapshots.";
 
@@ -112,7 +179,11 @@ export function formatSessionHistoryList(items: SessionHistoryItem[]): string {
   ].join("\n");
 }
 
-export function formatSessionHistoryControls(items: SessionHistoryItem[], statusMessage: string): string {
+export function formatSessionHistoryControls(
+  items: SessionHistoryItem[],
+  statusMessage: string,
+  importText = "",
+): string {
   const list =
     items.length > 0
       ? `<ol class="session-history-list">
@@ -133,8 +204,13 @@ export function formatSessionHistoryControls(items: SessionHistoryItem[], status
     <div class="actions">
       <button id="save-session-history" type="button" aria-describedby="session-history-help">Save current snapshot</button>
       <button id="copy-session-history" type="button">Copy history list</button>
+      <button id="copy-session-history-json" type="button">Copy history JSON</button>
       <button id="clear-session-history" type="button">Clear history</button>
     </div>
+    <label class="session-history-import-label" for="session-history-import-json">Paste/import history JSON</label>
+    <textarea id="session-history-import-json" rows="6" spellcheck="false" aria-describedby="session-history-import-help">${escapeHtml(importText)}</textarea>
+    <p id="session-history-import-help">Import replaces the saved local history in this browser.</p>
+    <button id="import-session-history" type="button">Import history</button>
     <p id="session-history-status" class="status" aria-live="polite">${escapeHtml(statusMessage)}</p>
     ${list}
   </div>`;
@@ -148,6 +224,40 @@ function normalizeTitle(title: string | undefined): string {
 function createSessionHistoryId(createdAt: string, title: string, content: string): string {
   const compactDate = createdAt.replace(/[-:.]/g, "");
   return `session-${compactDate}-${fnv1a(`${title}\n${content}`)}`;
+}
+
+function sortAndLimitSessionHistory(items: SessionHistoryItem[]): SessionHistoryItem[] {
+  return [...items]
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, maxSessionHistoryItems);
+}
+
+function normalizeImportedSessionHistoryItem(value: unknown): SessionHistoryItem | null {
+  if (!isSessionHistoryItem(value)) return null;
+  const createdAtDate = new Date(value.createdAt);
+  if (Number.isNaN(createdAtDate.getTime()) || createdAtDate.toISOString() !== value.createdAt) return null;
+  if (!value.content.trim()) return null;
+
+  const title = normalizeTitle(value.title);
+  const content = value.content;
+  return {
+    id: createSessionHistoryId(value.createdAt, title, content),
+    createdAt: value.createdAt,
+    title,
+    content,
+  };
+}
+
+function isSessionHistoryImportDocument(
+  value: unknown,
+): value is { schema: typeof sessionHistoryExportSchema; version: typeof sessionHistoryExportVersion; items: unknown[] } {
+  if (!value || typeof value !== "object") return false;
+  const document = value as Record<string, unknown>;
+  return (
+    document.schema === sessionHistoryExportSchema &&
+    document.version === sessionHistoryExportVersion &&
+    Array.isArray(document.items)
+  );
 }
 
 function fnv1a(value: string): string {
