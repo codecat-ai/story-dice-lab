@@ -220,6 +220,7 @@ export function formatSessionHistoryControls(
   importText = "",
   tagInput = "",
   selectedTagFilter = "",
+  selectedItemId = "",
 ): string {
   const tagOptions = listSessionHistoryTags(items);
   const list =
@@ -231,6 +232,11 @@ export function formatSessionHistoryControls(
                 <time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time>
                 <span>${escapeHtml(item.title)}</span>
                 ${formatTagBadges(item.tags)}
+                <button
+                  type="button"
+                  data-session-history-detail-id="${escapeHtml(item.id)}"
+                  aria-controls="session-history-detail-panel"
+                >View details</button>
               </li>`,
             )
             .join("")}
@@ -265,7 +271,41 @@ export function formatSessionHistoryControls(
     <button id="import-session-history" type="button">Import history</button>
     <p id="session-history-status" class="status" aria-live="polite">${escapeHtml(statusMessage)}</p>
     ${list}
+    ${formatSessionHistoryDetailPanel(items, selectedItemId)}
   </div>`;
+}
+
+export function formatSessionHistoryDetailPanel(items: SessionHistoryItem[], selectedItemId = ""): string {
+  if (!selectedItemId || items.length === 0) {
+    return `<section id="session-history-detail-panel" class="session-history-detail" aria-live="polite">
+      <h3>Saved snapshot details</h3>
+      <p class="session-history-empty">Select a visible saved snapshot to review, copy, or print it without changing the current roll.</p>
+    </section>`;
+  }
+
+  const item = items.find((historyItem) => historyItem.id === selectedItemId);
+  if (!item) {
+    return `<section id="session-history-detail-panel" class="session-history-detail" aria-live="polite">
+      <h3>Saved snapshot details</h3>
+      <p class="session-history-empty">That saved snapshot is not visible with the current history filter.</p>
+    </section>`;
+  }
+
+  const escapedId = escapeHtml(item.id);
+  return `<section
+      id="session-history-detail-panel"
+      class="session-history-detail"
+      aria-labelledby="session-history-detail-title-${escapedId}"
+    >
+      <h3 id="session-history-detail-title-${escapedId}">${escapeHtml(item.title)}</h3>
+      <p><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time></p>
+      ${formatTagBadges(item.tags)}
+      <div class="actions">
+        <button id="copy-session-history-detail-${escapedId}" type="button" data-session-history-detail-copy="${escapedId}">Copy saved snapshot</button>
+        <button id="print-session-history-detail-${escapedId}" type="button" data-session-history-detail-print="${escapedId}">Print saved snapshot</button>
+      </div>
+      <pre>${escapeHtml(item.content)}</pre>
+    </section>`;
 }
 
 function normalizeTitle(title: string | undefined): string {
