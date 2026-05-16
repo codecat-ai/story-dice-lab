@@ -59,12 +59,13 @@ import {
 import {
   clearSessionHistory,
   exportSessionHistoryJson,
-  filterSessionHistoryByTag,
+  filterSessionHistory,
   formatSessionHistoryControls,
   formatSessionHistoryList,
   loadSessionHistory,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
+  type SessionHistoryArchiveLabel,
   type SessionHistoryItem,
 } from './sessionHistory';
 import './styles.css';
@@ -103,7 +104,9 @@ let sessionHistoryItems: SessionHistoryItem[] = [];
 let sessionHistoryStatus = 'No local session snapshots saved yet.';
 let sessionHistoryImportText = '';
 let sessionHistoryTagInput = '';
+let sessionHistoryArchiveLabel: SessionHistoryArchiveLabel = '';
 let sessionHistoryTagFilter = '';
+let sessionHistoryArchiveFilter: SessionHistoryArchiveLabel = '';
 let selectedSessionHistoryItemId = '';
 refreshSessionHistory();
 
@@ -133,7 +136,9 @@ function render(): void {
           sessionHistoryStatus,
           sessionHistoryImportText,
           sessionHistoryTagInput,
+          sessionHistoryArchiveLabel,
           sessionHistoryTagFilter,
+          sessionHistoryArchiveFilter,
           selectedSessionHistoryItemId,
         )}
         ${formatRevisionCardsControls(revisionCardsOptions)}
@@ -246,6 +251,7 @@ function render(): void {
       title: formatSessionHistoryTitle(),
       content: formatCurrentSessionSnapshot(),
       tags: sessionHistoryTagInput,
+      archiveLabel: sessionHistoryArchiveLabel,
     });
     sessionHistoryItems = saveResult.items;
     if (saveResult.ok) {
@@ -270,8 +276,16 @@ function render(): void {
   document.querySelector<HTMLInputElement>('#session-history-tags')?.addEventListener('input', (event) => {
     sessionHistoryTagInput = (event.target as HTMLInputElement).value;
   });
+  document.querySelector<HTMLSelectElement>('#session-history-archive-label')?.addEventListener('change', (event) => {
+    sessionHistoryArchiveLabel = normalizeSessionHistoryArchiveValue((event.target as HTMLSelectElement).value);
+  });
   document.querySelector<HTMLSelectElement>('#session-history-tag-filter')?.addEventListener('change', (event) => {
     sessionHistoryTagFilter = (event.target as HTMLSelectElement).value;
+    render();
+  });
+  document.querySelector<HTMLSelectElement>('#session-history-archive-filter')?.addEventListener('change', (event) => {
+    sessionHistoryArchiveFilter = normalizeSessionHistoryArchiveValue((event.target as HTMLSelectElement).value);
+    selectedSessionHistoryItemId = '';
     render();
   });
   document.querySelectorAll<HTMLButtonElement>('[data-session-history-detail-id]').forEach((button) => {
@@ -327,6 +341,7 @@ function render(): void {
       sessionHistoryItems = importResult.items;
       sessionHistoryImportText = '';
       sessionHistoryTagFilter = '';
+      sessionHistoryArchiveFilter = '';
       selectedSessionHistoryItemId = '';
       sessionHistoryStatus = `Imported ${importResult.items.length} local session snapshots.`;
     } else {
@@ -338,6 +353,7 @@ function render(): void {
     const clearResult = clearSessionHistory(getSessionHistoryStorage());
     sessionHistoryItems = clearResult.items;
     sessionHistoryTagFilter = '';
+    sessionHistoryArchiveFilter = '';
     selectedSessionHistoryItemId = '';
     sessionHistoryStatus = clearResult.warning ?? 'Cleared local session history.';
     render();
@@ -735,7 +751,22 @@ function snapshotControls(): string {
 }
 
 function visibleSessionHistoryItems(): SessionHistoryItem[] {
-  return filterSessionHistoryByTag(sessionHistoryItems, sessionHistoryTagFilter);
+  return filterSessionHistory(sessionHistoryItems, {
+    tag: sessionHistoryTagFilter,
+    archiveLabel: sessionHistoryArchiveFilter,
+  });
+}
+
+function normalizeSessionHistoryArchiveValue(value: string): SessionHistoryArchiveLabel {
+  if (
+    value === 'classroom' ||
+    value === 'event' ||
+    value === 'draft' ||
+    value === 'assessment-follow-up'
+  ) {
+    return value;
+  }
+  return '';
 }
 
 function printSheet(): string {
