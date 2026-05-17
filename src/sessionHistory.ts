@@ -11,6 +11,16 @@ export type SessionHistoryItem = {
 
 export type SessionHistoryStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+export type SessionHistoryPrintTarget = {
+  document: {
+    open: () => void;
+    write: (html: string) => void;
+    close: () => void;
+  };
+  focus?: () => void;
+  print: () => void;
+};
+
 export type LoadSessionHistoryResult = {
   items: SessionHistoryItem[];
   warning?: string;
@@ -57,6 +67,7 @@ const maxSessionHistoryTags = 8;
 const maxSessionHistoryTagLength = 32;
 const sessionHistoryExportSchema = "story-dice-lab.session-history";
 const sessionHistoryExportVersion = 1;
+const printableSessionHistoryContentLimit = 2200;
 const unavailableWarning = "Local session history is unavailable in this browser.";
 const unreadableWarning = "Session history could not be read, so it was reset.";
 const invalidJsonWarning = "History import must be valid JSON.";
@@ -270,6 +281,62 @@ export function formatSessionHistoryList(items: SessionHistoryItem[]): string {
   ].join("\n");
 }
 
+export function formatPrintableSessionHistoryBatchHtml(items: SessionHistoryItem[]): string {
+  const countLabel = `${items.length} visible saved snapshot${items.length === 1 ? "" : "s"}`;
+  const records =
+    items.length > 0
+      ? `<section class="history-records" aria-label="Visible saved snapshots">
+        ${items.map(formatPrintableSessionHistoryRecord).join("")}
+      </section>`
+      : `<section class="history-empty" aria-label="No visible saved snapshots">
+        <h2>No visible saved snapshots</h2>
+        <p>No saved snapshots are visible with the current search or filters. Adjust the visible saved-history set and print again.</p>
+      </section>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Story Dice Lab saved history batch</title>
+  <style>
+    body { margin: 0; color: #16120d; font: 9.5pt/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .history-batch-print { padding: 0.35in; }
+    h1 { margin: 0 0 0.08in; font-size: 18pt; }
+    h2 { margin: 0; font-size: 12pt; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.04in 0.12in; margin: 0 0 0.16in; }
+    dt { font-weight: 800; }
+    dd { margin: 0; }
+    .history-record { break-inside: avoid; border-top: 1px solid #c8beb1; padding: 0.12in 0 0.14in; }
+    .history-meta { display: flex; flex-wrap: wrap; gap: 0.06in 0.16in; margin: 0.04in 0 0.08in; color: #554b40; }
+    .history-meta span, .history-meta time { display: inline-block; }
+    pre { margin: 0; white-space: pre-wrap; font: 8.8pt/1.35 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+    .history-truncation { margin: 0.08in 0 0; font-style: italic; color: #554b40; }
+    .history-empty { border-top: 1px solid #c8beb1; padding-top: 0.14in; }
+  </style>
+</head>
+<body>
+  <article class="history-batch-print" aria-label="Printable saved history batch">
+    <h1>Story Dice Lab saved history batch</h1>
+    <dl>
+      <dt>Visible records</dt><dd>${items.length}</dd>
+      <dt>Batch scope</dt><dd>${escapeHtml(countLabel)} from the current filtered saved-history view</dd>
+    </dl>
+    ${records}
+  </article>
+</body>
+</html>`;
+}
+
+export function printSessionHistoryBatch(target: SessionHistoryPrintTarget, items: SessionHistoryItem[]): void {
+  const html = formatPrintableSessionHistoryBatchHtml(items);
+  target.document.open();
+  target.document.write(html);
+  target.document.close();
+  target.focus?.();
+  target.print();
+}
+
 export function formatSessionHistoryControls(
   items: SessionHistoryItem[],
   statusMessage: string,
@@ -329,8 +396,10 @@ export function formatSessionHistoryControls(
       <button id="save-session-history" type="button" aria-describedby="session-history-help">Save current snapshot</button>
       <button id="copy-session-history" type="button">Copy history list</button>
       <button id="copy-session-history-json" type="button">Copy history JSON</button>
+      <button id="print-visible-session-history" type="button" aria-describedby="session-history-print-help">Print visible history</button>
       <button id="clear-session-history" type="button">Clear history</button>
     </div>
+    <p id="session-history-print-help">Prints only the saved snapshots visible after tag, archive-label, and search filters.</p>
     <label class="session-history-filter-label" for="session-history-tag-filter">Filter saved snapshots by tag</label>
     <select id="session-history-tag-filter">
       <option value="">All saved snapshots</option>
@@ -497,6 +566,34 @@ function formatTagSuffix(tags: string[]): string {
 
 function formatArchiveLabelSuffix(label: SessionHistoryArchiveLabel): string {
   return label ? ` (${formatArchiveLabel(label)})` : "";
+}
+
+function formatPrintableSessionHistoryRecord(item: SessionHistoryItem): string {
+  const boundedContent = boundPrintableSessionHistoryContent(item.content);
+  const tags = item.tags.length > 0 ? item.tags.map(escapeHtml).join(", ") : "No tags";
+  const archiveLabel = item.archiveLabel ? formatArchiveLabel(item.archiveLabel) : "No archive label";
+  return `<article class="history-record">
+          <h2>${escapeHtml(item.title)}</h2>
+          <p class="history-meta">
+            <time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time>
+            <span>Tags: ${tags}</span>
+            <span>Archive: ${escapeHtml(archiveLabel)}</span>
+          </p>
+          <pre>${escapeHtml(boundedContent.content)}</pre>${
+            boundedContent.truncated
+              ? `
+          <p class="history-truncation">This saved snapshot was shortened for printing. Open the local saved history detail to review the full text.</p>`
+              : ""
+          }
+        </article>`;
+}
+
+function boundPrintableSessionHistoryContent(content: string): { content: string; truncated: boolean } {
+  if (content.length <= printableSessionHistoryContentLimit) return { content, truncated: false };
+  return {
+    content: content.slice(0, printableSessionHistoryContentLimit).trimEnd(),
+    truncated: true,
+  };
 }
 
 function formatTagBadges(tags: string[]): string {
