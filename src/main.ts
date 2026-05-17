@@ -63,6 +63,7 @@ import {
   formatSessionHistoryControls,
   formatSessionHistoryList,
   loadSessionHistory,
+  printSessionHistoryBatch,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   type SessionHistoryArchiveLabel,
@@ -273,6 +274,19 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#copy-session-history-json')?.addEventListener('click', async () => {
     await copyText(exportSessionHistoryJson(visibleSessionHistoryItems()));
     sessionHistoryStatus = 'Copied local session history JSON.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#print-visible-session-history')?.addEventListener('click', () => {
+    const printWindow = window.open('', 'story-dice-lab-session-history-batch-print', 'popup,width=800,height=900');
+    if (!printWindow) {
+      sessionHistoryStatus = 'Browser popup blocking prevented the visible history print view.';
+      render();
+      return;
+    }
+
+    const visibleItems = visibleSessionHistoryItems();
+    printSessionHistoryBatch(printWindow, visibleItems);
+    sessionHistoryStatus = `Opened print view for ${visibleItems.length} visible saved snapshot${visibleItems.length === 1 ? '' : 's'}. Filters and search were applied.`;
     render();
   });
   document.querySelector<HTMLInputElement>('#session-history-tags')?.addEventListener('input', (event) => {

@@ -7,6 +7,7 @@ import {
   filterSessionHistoryBySearchQuery,
   filterSessionHistoryByTag,
   formatArchiveLabel,
+  formatPrintableSessionHistoryBatchHtml,
   formatSessionHistoryControls,
   formatSessionHistoryDetailPanel,
   formatSessionHistoryList,
@@ -14,6 +15,7 @@ import {
   loadSessionHistory,
   normalizeSessionHistoryArchiveLabel,
   normalizeSessionHistoryTags,
+  printSessionHistoryBatch,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   sessionHistoryStorageKey,
@@ -702,5 +704,136 @@ describe("local session history", () => {
         "missing-session",
       ),
     ).toContain("That saved snapshot is not visible with the current history filter.");
+  });
+
+  it("formats printable batch history from only the visible records passed in", () => {
+    const visible: SessionHistoryItem[] = [
+      {
+        id: "session-visible",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: "Visible classroom sprint",
+        content: "# Visible snapshot",
+        tags: ["Class 4A"],
+        archiveLabel: "classroom",
+      },
+    ];
+
+    const html = formatPrintableSessionHistoryBatchHtml(visible);
+
+    expect(html).toContain("Story Dice Lab saved history batch");
+    expect(html).toContain("1 visible saved snapshot");
+    expect(html).toContain("Visible classroom sprint");
+    expect(html).not.toContain("Excluded event sprint");
+    expect(html).not.toContain("Unfiltered draft");
+  });
+
+  it("escapes printable batch history title, tags, archive label, content, and count metadata", () => {
+    const html = formatPrintableSessionHistoryBatchHtml([
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: 'Share <round> "A"',
+        content: "# Snapshot <two>\nUse & revise.",
+        tags: ["Class <4A>", "Festival & Night"],
+        archiveLabel: "assessment-follow-up",
+      },
+    ]);
+
+    expect(html).toContain("<dt>Visible records</dt><dd>1</dd>");
+    expect(html).toContain("Share &lt;round&gt; &quot;A&quot;");
+    expect(html).toContain("Class &lt;4A&gt;");
+    expect(html).toContain("Festival &amp; Night");
+    expect(html).toContain("Assessment follow-up");
+    expect(html).toContain("# Snapshot &lt;two&gt;");
+    expect(html).toContain("Use &amp; revise.");
+    expect(html).not.toContain("<round>");
+    expect(html).not.toContain("<script>");
+  });
+
+  it("truncates very long printable batch history content with a readable notice", () => {
+    const html = formatPrintableSessionHistoryBatchHtml([
+      {
+        id: "session-long",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: "Long workshop record",
+        content: `${"A".repeat(2600)} should not print`,
+        tags: [],
+        archiveLabel: "",
+      },
+    ]);
+
+    expect(html).toContain("Long workshop record");
+    expect(html).toContain("This saved snapshot was shortened for printing.");
+    expect(html).not.toContain("should not print");
+  });
+
+  it("formats a useful printable empty state for an empty visible history set", () => {
+    const html = formatPrintableSessionHistoryBatchHtml([]);
+
+    expect(html).toContain("Story Dice Lab saved history batch");
+    expect(html).toContain("<dt>Visible records</dt><dd>0</dd>");
+    expect(html).toContain("No saved snapshots are visible with the current search or filters.");
+  });
+
+  it("writes printable batch history to an injected print target in deterministic order", () => {
+    const calls: string[] = [];
+    const writes: string[] = [];
+
+    printSessionHistoryBatch(
+      {
+        document: {
+          open: () => calls.push("open"),
+          write: (html) => {
+            calls.push("write");
+            writes.push(html);
+          },
+          close: () => calls.push("close"),
+        },
+        focus: () => calls.push("focus"),
+        print: () => calls.push("print"),
+      },
+      [
+        {
+          id: "session-a",
+          createdAt: "2026-05-15T09:05:00.000Z",
+          title: "Share round",
+          content: "# Snapshot two",
+          tags: ["Class 4A"],
+          archiveLabel: "event",
+        },
+      ],
+    );
+
+    expect(calls).toEqual(["open", "write", "close", "focus", "print"]);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain("<!doctype html>");
+    expect(writes[0]).toContain("Story Dice Lab saved history batch");
+  });
+
+  it("renders a print-visible-history action and says filters and search apply", () => {
+    const markup = formatSessionHistoryControls(
+      [
+        {
+          id: "session-a",
+          createdAt: "2026-05-15T09:05:00.000Z",
+          title: "Share round",
+          content: "# Snapshot two",
+          tags: ["Class 4A"],
+          archiveLabel: "event",
+        },
+      ],
+      "1 local session snapshot saved.",
+      "",
+      "",
+      "",
+      "Class 4A",
+      "event",
+      "share",
+      "",
+    );
+
+    expect(markup).toContain('id="print-visible-session-history"');
+    expect(markup).toContain("Print visible history");
+    expect(markup).toContain("Prints only the saved snapshots visible after tag, archive-label, and search filters.");
   });
 });
