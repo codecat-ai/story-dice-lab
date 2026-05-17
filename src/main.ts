@@ -107,6 +107,7 @@ let sessionHistoryTagInput = '';
 let sessionHistoryArchiveLabel: SessionHistoryArchiveLabel = '';
 let sessionHistoryTagFilter = '';
 let sessionHistoryArchiveFilter: SessionHistoryArchiveLabel = '';
+let sessionHistorySearchQuery = '';
 let selectedSessionHistoryItemId = '';
 refreshSessionHistory();
 
@@ -139,6 +140,7 @@ function render(): void {
           sessionHistoryArchiveLabel,
           sessionHistoryTagFilter,
           sessionHistoryArchiveFilter,
+          sessionHistorySearchQuery,
           selectedSessionHistoryItemId,
         )}
         ${formatRevisionCardsControls(revisionCardsOptions)}
@@ -281,10 +283,16 @@ function render(): void {
   });
   document.querySelector<HTMLSelectElement>('#session-history-tag-filter')?.addEventListener('change', (event) => {
     sessionHistoryTagFilter = (event.target as HTMLSelectElement).value;
+    selectedSessionHistoryItemId = '';
     render();
   });
   document.querySelector<HTMLSelectElement>('#session-history-archive-filter')?.addEventListener('change', (event) => {
     sessionHistoryArchiveFilter = normalizeSessionHistoryArchiveValue((event.target as HTMLSelectElement).value);
+    selectedSessionHistoryItemId = '';
+    render();
+  });
+  document.querySelector<HTMLInputElement>('#session-history-search')?.addEventListener('input', (event) => {
+    sessionHistorySearchQuery = (event.target as HTMLInputElement).value;
     selectedSessionHistoryItemId = '';
     render();
   });
@@ -342,6 +350,7 @@ function render(): void {
       sessionHistoryImportText = '';
       sessionHistoryTagFilter = '';
       sessionHistoryArchiveFilter = '';
+      sessionHistorySearchQuery = '';
       selectedSessionHistoryItemId = '';
       sessionHistoryStatus = `Imported ${importResult.items.length} local session snapshots.`;
     } else {
@@ -354,6 +363,7 @@ function render(): void {
     sessionHistoryItems = clearResult.items;
     sessionHistoryTagFilter = '';
     sessionHistoryArchiveFilter = '';
+    sessionHistorySearchQuery = '';
     selectedSessionHistoryItemId = '';
     sessionHistoryStatus = clearResult.warning ?? 'Cleared local session history.';
     render();
@@ -754,6 +764,7 @@ function visibleSessionHistoryItems(): SessionHistoryItem[] {
   return filterSessionHistory(sessionHistoryItems, {
     tag: sessionHistoryTagFilter,
     archiveLabel: sessionHistoryArchiveFilter,
+    searchQuery: sessionHistorySearchQuery,
   });
 }
 

@@ -198,11 +198,22 @@ export function filterSessionHistoryByArchiveLabel(
   return items.filter((item) => item.archiveLabel === normalizedLabel);
 }
 
+export function filterSessionHistoryBySearchQuery(items: SessionHistoryItem[], query: string): SessionHistoryItem[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return items;
+  return items.filter((item) =>
+    `${item.title}\n${item.content}`.toLocaleLowerCase().includes(normalizedQuery),
+  );
+}
+
 export function filterSessionHistory(
   items: SessionHistoryItem[],
-  filters: { tag?: string; archiveLabel?: SessionHistoryArchiveLabelInput },
+  filters: { tag?: string; archiveLabel?: SessionHistoryArchiveLabelInput; searchQuery?: string },
 ): SessionHistoryItem[] {
-  return filterSessionHistoryByArchiveLabel(filterSessionHistoryByTag(items, filters.tag ?? ""), filters.archiveLabel);
+  return filterSessionHistoryBySearchQuery(
+    filterSessionHistoryByArchiveLabel(filterSessionHistoryByTag(items, filters.tag ?? ""), filters.archiveLabel),
+    filters.searchQuery ?? "",
+  );
 }
 
 export function importSessionHistoryFromJson(json: string): ImportSessionHistoryResult {
@@ -267,11 +278,17 @@ export function formatSessionHistoryControls(
   selectedArchiveLabel: SessionHistoryArchiveLabelInput = "",
   selectedTagFilter = "",
   selectedArchiveFilter: SessionHistoryArchiveLabelInput = "",
+  searchQuery = "",
   selectedItemId = "",
 ): string {
   const tagOptions = listSessionHistoryTags(items);
   const archiveLabelOptions = formatArchiveLabelOptions(selectedArchiveLabel);
   const archiveFilterOptions = formatArchiveLabelOptions(selectedArchiveFilter, "All archive labels");
+  const hasActiveVisibleFilter = Boolean(
+    normalizeSessionHistoryTags(selectedTagFilter)[0] ||
+      normalizeSessionHistoryArchiveLabel(selectedArchiveFilter) ||
+      searchQuery.trim(),
+  );
   const list =
     items.length > 0
       ? `<ol class="session-history-list">
@@ -291,7 +308,11 @@ export function formatSessionHistoryControls(
             )
             .join("")}
         </ol>`
-      : '<p class="session-history-empty">No saved session snapshots yet.</p>';
+      : `<p class="session-history-empty">${
+          hasActiveVisibleFilter
+            ? "No saved snapshots match the current search or filters."
+            : "No saved session snapshots yet."
+        }</p>`;
 
   return `<div class="session-history-controls" aria-labelledby="session-history-title">
     <h2 id="session-history-title">Local session history</h2>
@@ -324,6 +345,9 @@ export function formatSessionHistoryControls(
     <select id="session-history-archive-filter">
       ${archiveFilterOptions}
     </select>
+    <label class="session-history-filter-label" for="session-history-search">Search saved snapshots</label>
+    <input id="session-history-search" type="search" value="${escapeHtml(searchQuery)}" aria-describedby="session-history-search-help" />
+    <p id="session-history-search-help">Search visible saved snapshot titles and Markdown text in this browser.</p>
     <label class="session-history-import-label" for="session-history-import-json">Paste/import history JSON</label>
     <textarea id="session-history-import-json" rows="6" spellcheck="false" aria-describedby="session-history-import-help">${escapeHtml(importText)}</textarea>
     <p id="session-history-import-help">Import replaces the saved local history in this browser.</p>

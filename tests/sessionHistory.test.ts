@@ -4,6 +4,7 @@ import {
   exportSessionHistoryJson,
   filterSessionHistory,
   filterSessionHistoryByArchiveLabel,
+  filterSessionHistoryBySearchQuery,
   filterSessionHistoryByTag,
   formatArchiveLabel,
   formatSessionHistoryControls,
@@ -520,6 +521,54 @@ describe("local session history", () => {
     expect(filterSessionHistoryByTag(items, "missing")).toEqual([]);
   });
 
+  it("filters visible history by trimmed case-insensitive title or content search across list and JSON exports", () => {
+    const items: SessionHistoryItem[] = [
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:10:00.000Z",
+        title: "Moonlit Revision",
+        content: "# Quiet workshop\nStudents revise the first image.",
+        tags: ["Class 4A"],
+        archiveLabel: "classroom",
+      },
+      {
+        id: "session-b",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: "Share round",
+        content: "# Lantern ending\nStudents read a closing paragraph.",
+        tags: ["Class 4A"],
+        archiveLabel: "event",
+      },
+      {
+        id: "session-c",
+        createdAt: "2026-05-15T09:00:00.000Z",
+        title: "Quiet draft",
+        content: "# Moonlit notes\nArchive these draft beats.",
+        tags: ["Class 5B"],
+        archiveLabel: "classroom",
+      },
+    ];
+
+    const visible = filterSessionHistory(items, {
+      tag: "class 4a",
+      archiveLabel: "classroom",
+      searchQuery: "  moonLIT  ",
+    });
+
+    expect(filterSessionHistoryBySearchQuery(items, " lantern ").map((item) => item.title)).toEqual(["Share round"]);
+    expect(visible.map((item) => item.title)).toEqual(["Moonlit Revision"]);
+
+    const list = formatSessionHistoryList(visible);
+    expect(list).toContain("Moonlit Revision");
+    expect(list).not.toContain("Share round");
+    expect(list).not.toContain("Quiet draft");
+
+    const exported = exportSessionHistoryJson(visible);
+    expect(exported).toContain("Moonlit Revision");
+    expect(exported).not.toContain("Share round");
+    expect(exported).not.toContain("Quiet draft");
+  });
+
   it("renders accessible save, copy, import, export, and clear controls with recent saved snapshots", () => {
     const markup = formatSessionHistoryControls(
       [
@@ -538,6 +587,7 @@ describe("local session history", () => {
       "draft",
       "",
       "assessment-follow-up",
+      "  lantern  ",
       "session-a",
     );
 
@@ -564,6 +614,10 @@ describe("local session history", () => {
     expect(markup).toContain("Filter saved snapshots by archive label");
     expect(markup).toContain("All archive labels");
     expect(markup).toContain('value="assessment-follow-up" selected');
+    expect(markup).toContain('for="session-history-search"');
+    expect(markup).toContain('id="session-history-search"');
+    expect(markup).toContain('value="  lantern  "');
+    expect(markup).toContain("Search saved snapshots");
     expect(markup).toContain('value="class 4a"');
     expect(markup).toContain('for="session-history-import-json"');
     expect(markup).toContain('id="session-history-import-json"');
@@ -584,6 +638,23 @@ describe("local session history", () => {
     expect(markup).toContain('id="copy-session-history-detail-session-a"');
     expect(markup).toContain('id="print-session-history-detail-session-a"');
     expect(markup).toContain("# Snapshot two");
+  });
+
+  it("renders a distinct empty search result state for active filters", () => {
+    const markup = formatSessionHistoryControls(
+      [],
+      "1 local session snapshot saved.",
+      "",
+      "",
+      "",
+      "Class 4A",
+      "classroom",
+      "moonlit",
+      "",
+    );
+
+    expect(markup).toContain("No saved snapshots match the current search or filters.");
+    expect(markup).not.toContain("No saved session snapshots yet.");
   });
 
   it("renders an escaped selected saved snapshot detail panel with keyed copy and print controls", () => {
