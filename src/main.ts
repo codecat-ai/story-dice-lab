@@ -46,7 +46,10 @@ import {
 import {
   exportTemplatePackJson,
   formatTemplatePackControls,
+  loadPersistedClassroomTemplates,
+  mergeClassroomSessionTemplates,
   parseTemplatePackJson,
+  saveImportedClassroomTemplates,
   type TemplatePackWordBankPreset,
 } from './templatePacks';
 import {
@@ -88,11 +91,14 @@ seed = shared.seed;
 let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
-let classroomSessionTemplates: ClassroomSessionTemplate[] = listClassroomSessionTemplates();
+const builtInClassroomSessionTemplates: ClassroomSessionTemplate[] = listClassroomSessionTemplates();
+const persistedClassroomTemplates = loadPersistedClassroomTemplates(getTemplatePackStorage(), builtInClassroomSessionTemplates);
+let importedClassroomTemplates: ClassroomSessionTemplate[] = persistedClassroomTemplates.importedTemplates;
+let classroomSessionTemplates: ClassroomSessionTemplate[] = persistedClassroomTemplates.templates;
 let selectedClassroomTemplateId = classroomSessionTemplates[0]?.id ?? '';
 let classroomTemplateStatus = 'Choose a classroom template to prefill seed, word bank, and agenda timing.';
 let templatePackImportText = '';
-let templatePackStatus = 'Copy the current local templates and presets, or paste a compatible template pack JSON.';
+let templatePackStatus = persistedClassroomTemplates.status;
 let wordBankPresetName = '';
 let wordBankPresetNotes = '';
 let selectedWordBankPresetName = '';
@@ -248,11 +254,17 @@ function render(): void {
     }
 
     const importedTemplates = importResult.pack.templates;
-    classroomSessionTemplates = mergeClassroomSessionTemplates(classroomSessionTemplates, importedTemplates);
-    if (importedTemplates.length > 0) selectedClassroomTemplateId = importedTemplates[0].id;
+    const nextImportedTemplates = mergeClassroomSessionTemplates(importedClassroomTemplates, importedTemplates);
+    const saveTemplatesResult = saveImportedClassroomTemplates(getTemplatePackStorage(), nextImportedTemplates);
+    importedClassroomTemplates = saveTemplatesResult.templates;
+    classroomSessionTemplates = mergeClassroomSessionTemplates(builtInClassroomSessionTemplates, importedClassroomTemplates);
+    if (importedTemplates.length > 0) {
+      selectedClassroomTemplateId =
+        classroomSessionTemplates.find((template) => template.id === importedTemplates[0].id)?.id ?? selectedClassroomTemplateId;
+    }
     const savedPresetCount = saveImportedTemplatePackPresets(importResult.pack.wordBankPresets);
     templatePackImportText = '';
-    templatePackStatus = `Imported "${importResult.pack.title}": ${importedTemplates.length} template${importedTemplates.length === 1 ? '' : 's'} available this session and ${savedPresetCount} word-bank preset${savedPresetCount === 1 ? '' : 's'} saved locally.`;
+    templatePackStatus = `Imported "${importResult.pack.title}": ${importedTemplates.length} template${importedTemplates.length === 1 ? '' : 's'} available. ${saveTemplatesResult.status} ${savedPresetCount} word-bank preset${savedPresetCount === 1 ? '' : 's'} saved locally.`;
     if (savedPresetCount < importResult.pack.wordBankPresets.length) {
       templatePackStatus += ' Some presets could not be saved because local storage is unavailable.';
     }
@@ -1037,17 +1049,6 @@ function currentTemplatePackJson(): string {
   });
 }
 
-function mergeClassroomSessionTemplates(
-  existingTemplates: ClassroomSessionTemplate[],
-  importedTemplates: ClassroomSessionTemplate[],
-): ClassroomSessionTemplate[] {
-  const byId = new Map(existingTemplates.map((template) => [template.id, template]));
-  for (const template of importedTemplates) {
-    byId.set(template.id, template);
-  }
-  return [...byId.values()];
-}
-
 function saveImportedTemplatePackPresets(presets: TemplatePackWordBankPreset[]): number {
   if (presets.length === 0) return 0;
 
@@ -1114,6 +1115,10 @@ function getWordBankPresetStorage(): Storage | null {
 }
 
 function getSessionHistoryStorage(): Storage | null {
+  return getLocalStorage();
+}
+
+function getTemplatePackStorage(): Storage | null {
   return getLocalStorage();
 }
 

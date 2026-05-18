@@ -3,6 +3,7 @@ import { normalizeWordBankJson, storyDiceCategories, type StoryDiceCategory, typ
 
 export const templatePackSchema = 'story-dice-lab.template-pack';
 export const templatePackVersion = 1;
+export const importedClassroomTemplateStorageKey = 'story-dice-lab:imported-classroom-templates:v1';
 
 const maxPackTitleLength = 96;
 const maxPackNotesLength = 600;
@@ -44,6 +45,29 @@ export type ParseTemplatePackResult =
       ok: false;
       error: string;
     };
+
+export type SaveImportedClassroomTemplatesResult =
+  | {
+      ok: true;
+      templates: ClassroomSessionTemplate[];
+      status: string;
+    }
+  | {
+      ok: false;
+      templates: ClassroomSessionTemplate[];
+      status: string;
+    };
+
+export type LoadPersistedClassroomTemplatesResult = {
+  templates: ClassroomSessionTemplate[];
+  importedTemplates: ClassroomSessionTemplate[];
+  status: string;
+};
+
+type StoredImportedClassroomTemplates = {
+  version: 1;
+  templates: unknown[];
+};
 
 export function exportTemplatePackJson(input: TemplatePackInput): string {
   const pack = buildTemplatePack(input);
@@ -105,6 +129,159 @@ export function parseTemplatePackJson(source: string): ParseTemplatePackResult {
       wordBankPresets: sortPresets(presetsResult.wordBankPresets),
     },
   };
+}
+
+export function saveImportedClassroomTemplates(
+  storage: Storage | null,
+  templates: ClassroomSessionTemplate[],
+): SaveImportedClassroomTemplatesResult {
+  const normalized = normalizeTemplateArray(templates);
+  const normalizedTemplates = normalized.ok ? sortTemplates(normalized.templates) : [];
+
+  if (!storage) {
+    return {
+      ok: false,
+      templates: normalizedTemplates,
+      status: 'Local template persistence is unavailable; imported templates are session-only.',
+    };
+  }
+
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      templates: [],
+      status: 'Imported classroom templates were invalid and were not saved locally.',
+    };
+  }
+
+  try {
+    storage.setItem(
+      importedClassroomTemplateStorageKey,
+      JSON.stringify(
+        {
+          version: 1,
+          templates: normalizedTemplates,
+        },
+        null,
+        2,
+      ),
+    );
+  } catch {
+    return {
+      ok: false,
+      templates: normalizedTemplates,
+      status: 'Could not save imported classroom templates locally; they are available for this session only.',
+    };
+  }
+
+  return {
+    ok: true,
+    templates: normalizedTemplates,
+    status: `Saved ${normalizedTemplates.length} imported classroom template${normalizedTemplates.length === 1 ? '' : 's'} in this browser.`,
+  };
+}
+
+export function loadPersistedClassroomTemplates(
+  storage: Storage | null,
+  builtInTemplates: ClassroomSessionTemplate[] = [],
+): LoadPersistedClassroomTemplatesResult {
+  const baseTemplates = cloneTemplates(builtInTemplates);
+  if (!storage) {
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Local template persistence is unavailable; imported templates are session-only.',
+    };
+  }
+
+  let source: string | null;
+  try {
+    source = storage.getItem(importedClassroomTemplateStorageKey);
+  } catch {
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Local template persistence is unavailable; imported templates are session-only.',
+    };
+  }
+
+  if (!source) {
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Imported classroom templates can be saved in this browser after import.',
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Saved imported classroom templates could not be read, so only built-in templates were loaded.',
+    };
+  }
+
+  if (!isStoredImportedClassroomTemplates(parsed)) {
+    const hasVersion = !!parsed && typeof parsed === 'object' && !Array.isArray(parsed) && 'version' in parsed;
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: hasVersion
+        ? 'Saved imported classroom templates use an unsupported storage version, so only built-in templates were loaded.'
+        : 'Saved imported classroom templates could not be read, so only built-in templates were loaded.',
+    };
+  }
+
+  const normalized = normalizeTemplateArray(parsed.templates);
+  if (!normalized.ok) {
+    return {
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Saved imported classroom templates were invalid, so only built-in templates were loaded.',
+    };
+  }
+
+  const importedTemplates = sortTemplates(normalized.templates);
+  return {
+    templates: mergeClassroomSessionTemplates(baseTemplates, importedTemplates),
+    importedTemplates,
+    status: `Loaded ${importedTemplates.length} imported classroom template${importedTemplates.length === 1 ? '' : 's'} saved in this browser.`,
+  };
+}
+
+export function mergeClassroomSessionTemplates(
+  builtInTemplates: ClassroomSessionTemplate[],
+  importedTemplates: ClassroomSessionTemplate[],
+): ClassroomSessionTemplate[] {
+  const merged = cloneTemplates(builtInTemplates);
+  const idIndexes = new Map(merged.map((template, index) => [template.id.toLocaleLowerCase(), index]));
+  const titleIndexes = new Map(merged.map((template, index) => [template.title.toLocaleLowerCase(), index]));
+
+  for (const importedTemplate of sortTemplates(importedTemplates)) {
+    const idKey = importedTemplate.id.toLocaleLowerCase();
+    const titleKey = importedTemplate.title.toLocaleLowerCase();
+    const existingIdIndex = idIndexes.get(idKey);
+    const existingTitleIndex = titleIndexes.get(titleKey);
+    if (existingTitleIndex !== undefined && existingTitleIndex !== existingIdIndex) {
+      continue;
+    }
+
+    const template = cloneTemplate(importedTemplate);
+    if (existingIdIndex !== undefined) {
+      titleIndexes.delete(merged[existingIdIndex].title.toLocaleLowerCase());
+      merged[existingIdIndex] = template;
+      titleIndexes.set(titleKey, existingIdIndex);
+    } else {
+      idIndexes.set(idKey, merged.length);
+      titleIndexes.set(titleKey, merged.length);
+      merged.push(template);
+    }
+  }
+
+  return merged;
 }
 
 export function formatTemplatePackControls(options: {
@@ -357,6 +534,17 @@ function sortPresets(presets: TemplatePackWordBankPreset[]): TemplatePackWordBan
     }));
 }
 
+function cloneTemplates(templates: ClassroomSessionTemplate[]): ClassroomSessionTemplate[] {
+  return templates.map(cloneTemplate);
+}
+
+function cloneTemplate(template: ClassroomSessionTemplate): ClassroomSessionTemplate {
+  return {
+    ...template,
+    wordBank: cloneWordBank(template.wordBank),
+  };
+}
+
 function cloneWordBank(wordBank: StoryDiceWordBank): StoryDiceWordBank {
   return Object.fromEntries(storyDiceCategories.map((category) => [category, [...wordBank[category]]])) as Record<
     StoryDiceCategory,
@@ -376,6 +564,16 @@ function hasDuplicate(values: string[]): boolean {
 
 function compareStable(first: string, second: string): number {
   return first.localeCompare(second, 'en', { sensitivity: 'base' });
+}
+
+function isStoredImportedClassroomTemplates(value: unknown): value is StoredImportedClassroomTemplates {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (value as { version?: unknown }).version === 1 &&
+    Array.isArray((value as { templates?: unknown }).templates)
+  );
 }
 
 function collapseWhitespace(value: string): string {

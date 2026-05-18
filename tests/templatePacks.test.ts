@@ -3,7 +3,11 @@ import { listClassroomSessionTemplates, type ClassroomSessionTemplate } from '..
 import {
   exportTemplatePackJson,
   formatTemplatePackControls,
+  importedClassroomTemplateStorageKey,
+  loadPersistedClassroomTemplates,
+  mergeClassroomSessionTemplates,
   parseTemplatePackJson,
+  saveImportedClassroomTemplates,
   templatePackSchema,
   templatePackVersion,
   type TemplatePackWordBankPreset,
@@ -301,4 +305,162 @@ describe('template packs', () => {
     expect(parsed.ok).toBe(true);
     expect(listClassroomSessionTemplates()).toEqual(before);
   });
+
+  it('persists only normalized imported classroom templates under a versioned key', () => {
+    const storage = new MemoryStorage();
+    const cleanTemplate = makeTemplate();
+
+    const saved = saveImportedClassroomTemplates(storage, [
+      { ...cleanTemplate, title: '  Center Sprint  ', wordBank: { ...validBank, character: ['custom hero', ' custom hero '] } },
+      { ...cleanTemplate, id: 'alpha-lab', title: 'Alpha Lab', agendaTitle: '  Alpha  ' },
+    ]);
+
+    expect(saved).toEqual({
+      ok: true,
+      templates: [
+        { ...cleanTemplate, id: 'alpha-lab', title: 'Alpha Lab', agendaTitle: 'Alpha', wordBank: { ...validBank, character: ['custom hero'] } },
+        { ...cleanTemplate, title: 'Center Sprint', wordBank: { ...validBank, character: ['custom hero'] } },
+      ],
+      status: 'Saved 2 imported classroom templates in this browser.',
+    });
+    expect(JSON.parse(storage.getItem(importedClassroomTemplateStorageKey) ?? '{}')).toEqual({
+      version: 1,
+      templates: saved.ok ? saved.templates : [],
+    });
+  });
+
+  it('loads persisted classroom templates as normalized clones and merges them deterministically', () => {
+    const storage = new MemoryStorage();
+    const cleanTemplate = makeTemplate();
+    storage.setItem(
+      importedClassroomTemplateStorageKey,
+      JSON.stringify({
+        version: 1,
+        templates: [
+          { ...cleanTemplate, id: 'z-import', title: 'Z Import', wordBank: { ...validBank, character: ['custom hero', 'custom hero'] } },
+          { ...cleanTemplate, id: 'a-import', title: 'A Import', agendaTitle: '  A Import  ' },
+        ],
+      }),
+    );
+
+    const builtIns = listClassroomSessionTemplates();
+    const loaded = loadPersistedClassroomTemplates(storage, builtIns);
+
+    expect(loaded.status).toBe('Loaded 2 imported classroom templates saved in this browser.');
+    expect(loaded.importedTemplates.map((template) => template.id)).toEqual(['a-import', 'z-import']);
+    expect(loaded.templates.map((entry) => entry.id)).toEqual([...builtIns.map((entry) => entry.id), 'a-import', 'z-import']);
+
+    loaded.importedTemplates[0].title = 'Mutated';
+    loaded.importedTemplates[0].wordBank.character[0] = 'mutated';
+    const loadedAgain = loadPersistedClassroomTemplates(storage, builtIns);
+    expect(loadedAgain.importedTemplates[0].title).toBe('A Import');
+    expect(loadedAgain.importedTemplates[0].wordBank.character[0]).toBe('custom hero');
+  });
+
+  it('handles unavailable, malformed, wrong-version, invalid, and write-blocked storage without throwing', () => {
+    const cleanTemplate = makeTemplate();
+
+    expect(loadPersistedClassroomTemplates(null, [cleanTemplate])).toEqual({
+      templates: [cleanTemplate],
+      importedTemplates: [],
+      status: 'Local template persistence is unavailable; imported templates are session-only.',
+    });
+
+    const storage = new MemoryStorage();
+    storage.setItem(importedClassroomTemplateStorageKey, '{not json');
+    expect(loadPersistedClassroomTemplates(storage, [cleanTemplate])).toEqual({
+      templates: [cleanTemplate],
+      importedTemplates: [],
+      status: 'Saved imported classroom templates could not be read, so only built-in templates were loaded.',
+    });
+
+    storage.setItem(importedClassroomTemplateStorageKey, JSON.stringify({ version: 99, templates: [cleanTemplate] }));
+    expect(loadPersistedClassroomTemplates(storage, [cleanTemplate])).toEqual({
+      templates: [cleanTemplate],
+      importedTemplates: [],
+      status: 'Saved imported classroom templates use an unsupported storage version, so only built-in templates were loaded.',
+    });
+
+    storage.setItem(importedClassroomTemplateStorageKey, JSON.stringify({ version: 1, templates: [{ ...cleanTemplate, title: '' }] }));
+    expect(loadPersistedClassroomTemplates(storage, [cleanTemplate])).toEqual({
+      templates: [cleanTemplate],
+      importedTemplates: [],
+      status: 'Saved imported classroom templates were invalid, so only built-in templates were loaded.',
+    });
+
+    expect(saveImportedClassroomTemplates(null, [cleanTemplate])).toEqual({
+      ok: false,
+      templates: [{ ...cleanTemplate, wordBank: { ...validBank, character: ['custom hero'] } }],
+      status: 'Local template persistence is unavailable; imported templates are session-only.',
+    });
+    expect(saveImportedClassroomTemplates(new ThrowingStorage(), [cleanTemplate])).toEqual({
+      ok: false,
+      templates: [{ ...cleanTemplate, wordBank: { ...validBank, character: ['custom hero'] } }],
+      status: 'Could not save imported classroom templates locally; they are available for this session only.',
+    });
+  });
+
+  it('merges built-in and imported classroom templates without duplicate ids or titles', () => {
+    const builtIns = listClassroomSessionTemplates();
+    const merged = mergeClassroomSessionTemplates(builtIns, [
+      { ...template, id: builtIns[0].id, title: 'Replacement Import' },
+      { ...template, id: 'duplicate-title', title: builtIns[1].title },
+      { ...template, id: 'z-import', title: 'Z Import' },
+      { ...template, id: 'a-import', title: 'A Import' },
+    ]);
+
+    expect(merged.map((entry) => entry.id)).toEqual([builtIns[0].id, ...builtIns.slice(1).map((entry) => entry.id), 'a-import', 'z-import']);
+    expect(merged.find((entry) => entry.id === builtIns[0].id)?.title).toBe('Replacement Import');
+    expect(merged.some((entry) => entry.id === 'duplicate-title')).toBe(false);
+    expect(new Set(merged.map((entry) => entry.id.toLocaleLowerCase())).size).toBe(merged.length);
+    expect(new Set(merged.map((entry) => entry.title.toLocaleLowerCase())).size).toBe(merged.length);
+  });
 });
+
+function makeTemplate(): ClassroomSessionTemplate {
+  return {
+    ...template,
+    wordBank: {
+      ...validBank,
+      character: ['custom hero', 'custom hero'],
+    },
+  };
+}
+
+class MemoryStorage implements Storage {
+  private readonly values = new Map<string, string>();
+
+  get length(): number {
+    return this.values.size;
+  }
+
+  clear(): void {
+    this.values.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null;
+  }
+
+  key(index: number): string | null {
+    return [...this.values.keys()][index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.values.delete(key);
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value);
+  }
+}
+
+class ThrowingStorage extends MemoryStorage {
+  override getItem(): string | null {
+    throw new Error('blocked');
+  }
+
+  override setItem(): void {
+    throw new Error('blocked');
+  }
+}
