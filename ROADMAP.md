@@ -2,23 +2,23 @@
 
 Maturity: `growth`
 
-Planned cadence: 1-2 focused sessions per week while classroom/workshop workflows are still being hardened. Reassess for `maintenance` after the local-first classroom facilitation loop has backup, reflection, and template-pack persistence covered by tests and docs.
+Planned cadence: 1-2 focused sessions per week while classroom/workshop workflows are still being hardened. Reassess for `maintenance` after the local-first classroom facilitation loop has reflection prompts and a demo walkthrough covered by tests and docs.
 
 ## Now
 
 - Keep imported classroom template packs persistent, validated, and safe when browser storage is missing or corrupt.
+- Keep destructive local actions guarded by tested browser-only backup reminders.
 - Preserve truthful source-checkout-only usage docs until there is an explicitly approved package or hosted release.
 - Prioritize user-facing classroom reliability over additional novelty controls.
 
 ## Next
 
-- Add a browser-only backup reminder before facilitators clear local session history, saved presets, or imported templates.
 - Add printable facilitator reflection prompts that turn saved histories into next-session goals.
 - Add a short demo dataset/workshop walkthrough showing imported packs, saved histories, and facilitator exports together.
+- Consider optional combined local export bundles for session history, word-bank presets, and imported template packs with clear privacy wording.
 
 ## Later
 
-- Consider optional export/import bundles that combine session history, word-bank presets, and imported template packs with clear privacy warnings.
 - Explore lightweight accessibility/usability polish for workshop projection and keyboard-only facilitation.
 
 ## Maintenance triggers
@@ -28,7 +28,7 @@ Planned cadence: 1-2 focused sessions per week while classroom/workshop workflow
 
 ## Cadence review notes
 
-- If the backup reminder and reflection prompt items land without new adoption signals or substantial classroom gaps, lower cadence to `maintenance` and shift routine effort to another active/growth project or a carefully selected non-checker project.
+- If the reflection prompt and demo walkthrough items land without new adoption signals or substantial classroom gaps, lower cadence to `maintenance` and shift routine effort to another active/growth project or a carefully selected non-checker project.
 
 ## Completion-review rule
 

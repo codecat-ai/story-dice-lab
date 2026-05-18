@@ -64,6 +64,20 @@ export type LoadPersistedClassroomTemplatesResult = {
   status: string;
 };
 
+export type ClearImportedClassroomTemplatesResult =
+  | {
+      ok: true;
+      templates: ClassroomSessionTemplate[];
+      importedTemplates: [];
+      status: string;
+    }
+  | {
+      ok: false;
+      templates: ClassroomSessionTemplate[];
+      importedTemplates: ClassroomSessionTemplate[];
+      status: string;
+    };
+
 type StoredImportedClassroomTemplates = {
   version: 1;
   templates: unknown[];
@@ -252,6 +266,40 @@ export function loadPersistedClassroomTemplates(
   };
 }
 
+export function clearImportedClassroomTemplates(
+  storage: Storage | null,
+  builtInTemplates: ClassroomSessionTemplate[] = [],
+): ClearImportedClassroomTemplatesResult {
+  const baseTemplates = cloneTemplates(builtInTemplates);
+  if (!storage) {
+    return {
+      ok: true,
+      templates: baseTemplates,
+      importedTemplates: [],
+      status: 'Cleared imported classroom templates for this session; local persistence is unavailable.',
+    };
+  }
+
+  try {
+    storage.removeItem(importedClassroomTemplateStorageKey);
+  } catch {
+    const loaded = loadPersistedClassroomTemplates(storage, builtInTemplates);
+    return {
+      ok: false,
+      templates: loaded.templates,
+      importedTemplates: loaded.importedTemplates,
+      status: 'Local template persistence is unavailable, so imported templates could not be cleared.',
+    };
+  }
+
+  return {
+    ok: true,
+    templates: baseTemplates,
+    importedTemplates: [],
+    status: 'Cleared imported classroom templates saved in this browser.',
+  };
+}
+
 export function mergeClassroomSessionTemplates(
   builtInTemplates: ClassroomSessionTemplate[],
   importedTemplates: ClassroomSessionTemplate[],
@@ -288,7 +336,10 @@ export function formatTemplatePackControls(options: {
   exportText: string;
   importText: string;
   statusMessage: string;
+  importedTemplateCount?: number;
 }): string {
+  const clearDisabled = options.importedTemplateCount && options.importedTemplateCount > 0 ? '' : ' disabled';
+
   return `<div class="template-pack-controls" aria-labelledby="template-pack-controls-title">
     <h2 id="template-pack-controls-title">Template packs</h2>
     <p id="template-pack-help">Copy a portable local JSON pack, or paste a pack shared by a department or writing center.</p>
@@ -303,6 +354,7 @@ export function formatTemplatePackControls(options: {
         <textarea id="template-pack-import-json" rows="8" spellcheck="false" aria-describedby="template-pack-help">${escapeHtml(options.importText)}</textarea>
       </div>
       <button id="import-template-pack" type="button">Import template pack</button>
+      <button id="clear-imported-templates" type="button"${clearDisabled}>Clear imported templates</button>
     </div>
     <p id="template-pack-status" class="template-pack-status" role="status">${escapeHtml(options.statusMessage)}</p>
   </div>`;
