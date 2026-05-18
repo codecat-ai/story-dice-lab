@@ -44,6 +44,7 @@ import {
   type ClassroomSessionTemplate,
 } from './classroomSessionTemplates';
 import {
+  clearImportedClassroomTemplates,
   exportTemplatePackJson,
   formatTemplatePackControls,
   loadPersistedClassroomTemplates,
@@ -79,6 +80,7 @@ import {
   type SessionHistoryArchiveLabel,
   type SessionHistoryItem,
 } from './sessionHistory';
+import { createBrowserBackupConfirmation, shouldProceedWithLocalDestructiveAction } from './localBackupReminder';
 import './styles.css';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -150,6 +152,7 @@ function render(): void {
           exportText: currentTemplatePackJson(),
           importText: templatePackImportText,
           statusMessage: templatePackStatus,
+          importedTemplateCount: importedClassroomTemplates.length,
         })}
         ${formatExportActionControls()}
         ${snapshotControls()}
@@ -268,6 +271,24 @@ function render(): void {
     if (savedPresetCount < importResult.pack.wordBankPresets.length) {
       templatePackStatus += ' Some presets could not be saved because local storage is unavailable.';
     }
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#clear-imported-templates')?.addEventListener('click', () => {
+    const decision = shouldProceedWithLocalDestructiveAction({
+      actionLabel: 'clear imported classroom templates',
+      itemCount: importedClassroomTemplates.length,
+      itemLabel: 'imported template',
+      confirm: getBackupConfirmation(),
+    });
+    if (!decision.proceed) return;
+
+    const clearResult = clearImportedClassroomTemplates(getTemplatePackStorage(), builtInClassroomSessionTemplates);
+    importedClassroomTemplates = clearResult.importedTemplates;
+    classroomSessionTemplates = clearResult.templates;
+    if (!classroomSessionTemplates.some((template) => template.id === selectedClassroomTemplateId)) {
+      selectedClassroomTemplateId = classroomSessionTemplates[0]?.id ?? '';
+    }
+    templatePackStatus = clearResult.status;
     render();
   });
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
@@ -426,6 +447,14 @@ function render(): void {
     render();
   });
   document.querySelector<HTMLButtonElement>('#clear-session-history')?.addEventListener('click', () => {
+    const decision = shouldProceedWithLocalDestructiveAction({
+      actionLabel: 'clear local session history',
+      itemCount: sessionHistoryItems.length,
+      itemLabel: 'saved snapshot',
+      confirm: getBackupConfirmation(),
+    });
+    if (!decision.proceed) return;
+
     const clearResult = clearSessionHistory(getSessionHistoryStorage());
     sessionHistoryItems = clearResult.items;
     sessionHistoryTagFilter = '';
@@ -612,6 +641,14 @@ function render(): void {
     }
 
     const presetName = selectedWordBankPresetName || wordBankPresets[0]?.name || '';
+    const decision = shouldProceedWithLocalDestructiveAction({
+      actionLabel: 'delete this word-bank preset',
+      itemCount: presetName ? 1 : 0,
+      itemLabel: 'word-bank preset',
+      confirm: getBackupConfirmation(),
+    });
+    if (!decision.proceed) return;
+
     const deleteResult = deleteWordBankPreset(storage, presetName);
     if (deleteResult.ok) {
       wordBankPresets = listWordBankPresets(storage);
@@ -1128,6 +1165,10 @@ function getLocalStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+function getBackupConfirmation(): ((message: string) => boolean) | undefined {
+  return createBrowserBackupConfirmation(window);
 }
 
 async function copyText(text: string): Promise<void> {

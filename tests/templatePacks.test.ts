@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { listClassroomSessionTemplates, type ClassroomSessionTemplate } from '../src/classroomSessionTemplates';
 import {
+  clearImportedClassroomTemplates,
   exportTemplatePackJson,
   formatTemplatePackControls,
   importedClassroomTemplateStorageKey,
@@ -295,7 +296,17 @@ describe('template packs', () => {
       '<textarea id="template-pack-import-json" rows="8" spellcheck="false" aria-describedby="template-pack-help">&lt;paste json&gt;</textarea>',
     );
     expect(controls).toContain('<button id="import-template-pack" type="button">Import template pack</button>');
+    expect(controls).toContain('<button id="clear-imported-templates" type="button" disabled>Clear imported templates</button>');
     expect(controls).toContain('<p id="template-pack-status" class="template-pack-status" role="status">Imported &lt;Center&gt; &amp; ready.</p>');
+
+    expect(
+      formatTemplatePackControls({
+        exportText: '{}',
+        importText: '',
+        statusMessage: 'Ready.',
+        importedTemplateCount: 2,
+      }),
+    ).toContain('<button id="clear-imported-templates" type="button">Clear imported templates</button>');
   });
 
   it('can export the built-in templates without mutating them', () => {
@@ -357,6 +368,24 @@ describe('template packs', () => {
     expect(loadedAgain.importedTemplates[0].wordBank.character[0]).toBe('custom hero');
   });
 
+  it('clears only imported classroom templates from local storage', () => {
+    const storage = new MemoryStorage();
+    const builtIns = listClassroomSessionTemplates();
+    const cleanTemplate = makeTemplate();
+    storage.setItem(
+      importedClassroomTemplateStorageKey,
+      JSON.stringify({ version: 1, templates: [{ ...cleanTemplate, id: 'a-import', title: 'A Import' }] }),
+    );
+
+    expect(clearImportedClassroomTemplates(storage, builtIns)).toEqual({
+      ok: true,
+      templates: builtIns,
+      importedTemplates: [],
+      status: 'Cleared imported classroom templates saved in this browser.',
+    });
+    expect(storage.getItem(importedClassroomTemplateStorageKey)).toBeNull();
+  });
+
   it('handles unavailable, malformed, wrong-version, invalid, and write-blocked storage without throwing', () => {
     const cleanTemplate = makeTemplate();
 
@@ -397,6 +426,12 @@ describe('template packs', () => {
       ok: false,
       templates: [{ ...cleanTemplate, wordBank: { ...validBank, character: ['custom hero'] } }],
       status: 'Could not save imported classroom templates locally; they are available for this session only.',
+    });
+    expect(clearImportedClassroomTemplates(null, [cleanTemplate])).toEqual({
+      ok: true,
+      templates: [cleanTemplate],
+      importedTemplates: [],
+      status: 'Cleared imported classroom templates for this session; local persistence is unavailable.',
     });
   });
 
