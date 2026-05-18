@@ -75,6 +75,32 @@ describe('classroom session templates', () => {
     });
   });
 
+  it('applies caller-provided imported templates without requiring source changes', () => {
+    const importedTemplate = {
+      ...listClassroomSessionTemplates()[0],
+      id: 'writing-center-import',
+      title: 'Writing Center Import',
+      seed: 'writing center import',
+      agendaTitle: 'Writing Center Import',
+      wordBank: {
+        character: ['tutor'],
+        want: ['to find the draft question'],
+        setting: ['writing center table'],
+        obstacle: ['the assignment prompt is vague'],
+        object: ['annotated paragraph'],
+        twist: ['the thesis appears in the last line'],
+      },
+    };
+
+    const applied = applyClassroomSessionTemplate('writing-center-import', [importedTemplate]);
+
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) throw new Error('expected imported template to apply');
+    expect(applied.template.title).toBe('Writing Center Import');
+    expect(applied.seed).toBe('writing center import');
+    expect(applied.wordBank.character).toEqual(['tutor']);
+  });
+
   it('renders escaped selector controls with template descriptions and notes', () => {
     const customBank: StoryDiceWordBank = {
       character: ['one', 'two'],
