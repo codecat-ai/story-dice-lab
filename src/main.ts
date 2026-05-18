@@ -71,10 +71,12 @@ import {
   clearSessionHistory,
   exportSessionHistoryJson,
   filterSessionHistory,
+  formatSessionHistoryReflectionPrompts,
   formatSessionHistoryControls,
   formatSessionHistoryList,
   loadSessionHistory,
   printSessionHistoryBatch,
+  printSessionHistoryReflectionPrompts,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
   type SessionHistoryArchiveLabel,
@@ -361,6 +363,25 @@ function render(): void {
     const visibleItems = visibleSessionHistoryItems();
     printSessionHistoryBatch(printWindow, visibleItems);
     sessionHistoryStatus = `Opened print view for ${visibleItems.length} visible saved snapshot${visibleItems.length === 1 ? '' : 's'}. Filters and search were applied.`;
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-session-history-reflection-prompts')?.addEventListener('click', async () => {
+    const visibleItems = visibleSessionHistoryItems();
+    await copyText(formatSessionHistoryReflectionPrompts(visibleItems));
+    sessionHistoryStatus = `Copied reflection prompts for ${visibleItems.length} visible saved snapshot${visibleItems.length === 1 ? '' : 's'}. Filters and search were applied.`;
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#print-session-history-reflection-prompts')?.addEventListener('click', () => {
+    const printWindow = window.open('', 'story-dice-lab-session-history-reflection-print', 'popup,width=800,height=900');
+    if (!printWindow) {
+      sessionHistoryStatus = 'Browser popup blocking prevented the reflection prompt print view.';
+      render();
+      return;
+    }
+
+    const visibleItems = visibleSessionHistoryItems();
+    printSessionHistoryReflectionPrompts(printWindow, visibleItems);
+    sessionHistoryStatus = `Opened reflection prompt print view for ${visibleItems.length} visible saved snapshot${visibleItems.length === 1 ? '' : 's'}. Filters and search were applied.`;
     render();
   });
   document.querySelector<HTMLInputElement>('#session-history-tags')?.addEventListener('input', (event) => {

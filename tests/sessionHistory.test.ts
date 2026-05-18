@@ -8,6 +8,8 @@ import {
   filterSessionHistoryByTag,
   formatArchiveLabel,
   formatPrintableSessionHistoryBatchHtml,
+  formatPrintableSessionHistoryReflectionPromptsHtml,
+  formatSessionHistoryReflectionPrompts,
   formatSessionHistoryControls,
   formatSessionHistoryDetailPanel,
   formatSessionHistoryList,
@@ -15,6 +17,7 @@ import {
   loadSessionHistory,
   normalizeSessionHistoryArchiveLabel,
   normalizeSessionHistoryTags,
+  printSessionHistoryReflectionPrompts,
   printSessionHistoryBatch,
   replaceSessionHistoryFromJson,
   saveSessionSnapshotToHistory,
@@ -835,5 +838,185 @@ describe("local session history", () => {
     expect(markup).toContain('id="print-visible-session-history"');
     expect(markup).toContain("Print visible history");
     expect(markup).toContain("Prints only the saved snapshots visible after tag, archive-label, and search filters.");
+  });
+
+  it("formats printable facilitator reflection prompts for multiple visible saved records", () => {
+    const text = formatSessionHistoryReflectionPrompts([
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:10:00.000Z",
+        title: "Moonlit Revision",
+        content:
+          "# Session snapshot\n\nStudents built sensory setting details around the locked object.\n\nThey skipped the twist follow-through during sharing.",
+        tags: ["Class 4A", "Revision"],
+        archiveLabel: "classroom",
+      },
+      {
+        id: "session-b",
+        createdAt: "2026-05-08T09:10:00.000Z",
+        title: "Lantern Share",
+        content: "# Share round\n\nStrong peer notes named character wants and clearer obstacles.",
+        tags: ["Class 4A"],
+        archiveLabel: "assessment-follow-up",
+      },
+    ]);
+
+    expect(text).toContain("Story Dice Lab facilitator reflection prompts");
+    expect(text).toContain("Visible saved records: 2");
+    expect(text).toContain("1. Moonlit Revision");
+    expect(text).toContain("Date: 2026-05-15T09:10:00.000Z");
+    expect(text).toContain("Tags: Class 4A, Revision");
+    expect(text).toContain("Archive: Classroom");
+    expect(text).toContain("Theme/excerpt: Session snapshot Students built sensory setting details");
+    expect(text).toContain("2. Lantern Share");
+    expect(text).toContain("Archive: Assessment follow-up");
+    expect(text).toContain("What worked last time?");
+    expect(text).toContain("What should we revisit?");
+    expect(text).toContain("Next-session goal");
+    expect(text).toContain("First 10 minutes");
+  });
+
+  it("bounds long reflection prompt excerpts so printouts stay compact", () => {
+    const text = formatSessionHistoryReflectionPrompts([
+      {
+        id: "session-long",
+        createdAt: "2026-05-15T09:10:00.000Z",
+        title: "Long record",
+        content: `# Long\n\n${"A".repeat(900)} hidden tail`,
+        tags: [],
+        archiveLabel: "",
+      },
+    ]);
+
+    expect(text).toContain("Theme/excerpt: Long");
+    expect(text).toContain("...");
+    expect(text).not.toContain("hidden tail");
+  });
+
+  it("formats a friendly facilitator reflection empty state", () => {
+    const text = formatSessionHistoryReflectionPrompts([]);
+    const html = formatPrintableSessionHistoryReflectionPromptsHtml([]);
+
+    expect(text).toContain("No visible saved session snapshots yet.");
+    expect(text).toContain("Use this blank reflection sheet after saving or importing session history.");
+    expect(text).toContain("Next-session goal");
+    expect(html).toContain("No visible saved session snapshots");
+    expect(html).toContain("Set one small goal for the next workshop.");
+  });
+
+  it("escapes user-provided reflection prompt content in printable HTML", () => {
+    const html = formatPrintableSessionHistoryReflectionPromptsHtml([
+      {
+        id: "session-a",
+        createdAt: "2026-05-15T09:10:00.000Z",
+        title: 'Moonlit <script>alert("x")</script>',
+        content: "# Snapshot\n\nUse <b>bold</b> & revisit [link](javascript:alert(1)).",
+        tags: ["Class <4A>"],
+        archiveLabel: "draft",
+      },
+    ]);
+
+    expect(html).toContain("Moonlit &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;");
+    expect(html).toContain("Use &lt;b&gt;bold&lt;/b&gt; &amp; revisit");
+    expect(html).toContain("Class &lt;4A&gt;");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<b>bold</b>");
+    expect(html).not.toContain("javascript:alert");
+  });
+
+  it("renders copy and print reflection prompt actions beside visible history actions", () => {
+    const markup = formatSessionHistoryControls(
+      [
+        {
+          id: "session-a",
+          createdAt: "2026-05-15T09:05:00.000Z",
+          title: "Share round",
+          content: "# Snapshot two",
+          tags: ["Class 4A"],
+          archiveLabel: "event",
+        },
+      ],
+      "1 local session snapshot saved.",
+      "",
+      "",
+      "",
+      "Class 4A",
+      "event",
+      "share",
+      "",
+    );
+
+    expect(markup).toContain('id="copy-session-history-reflection-prompts"');
+    expect(markup).toContain("Copy reflection prompts");
+    expect(markup).toContain('id="print-session-history-reflection-prompts"');
+    expect(markup).toContain("Print reflection prompts");
+    expect(markup).toContain("Reflection prompts use only the currently visible saved-history set.");
+  });
+
+  it("formats reflection prompts from only the filtered visible records passed in", () => {
+    const allItems: SessionHistoryItem[] = [
+      {
+        id: "session-visible",
+        createdAt: "2026-05-15T09:05:00.000Z",
+        title: "Visible classroom sprint",
+        content: "# Visible snapshot\n\nStudents used lantern imagery.",
+        tags: ["Class 4A"],
+        archiveLabel: "classroom",
+      },
+      {
+        id: "session-hidden",
+        createdAt: "2026-05-14T09:05:00.000Z",
+        title: "Hidden event sprint",
+        content: "# Hidden snapshot\n\nDo not leak this record.",
+        tags: ["Festival"],
+        archiveLabel: "event",
+      },
+    ];
+    const visible = filterSessionHistory(allItems, { tag: "Class 4A", archiveLabel: "classroom", searchQuery: "lantern" });
+
+    const text = formatSessionHistoryReflectionPrompts(visible);
+    const html = formatPrintableSessionHistoryReflectionPromptsHtml(visible);
+
+    expect(text).toContain("Visible classroom sprint");
+    expect(text).not.toContain("Hidden event sprint");
+    expect(text).not.toContain("Do not leak this record");
+    expect(html).toContain("Visible classroom sprint");
+    expect(html).not.toContain("Hidden event sprint");
+    expect(html).not.toContain("Do not leak this record");
+  });
+
+  it("writes reflection prompts to an injected print target in deterministic order", () => {
+    const calls: string[] = [];
+    const writes: string[] = [];
+
+    printSessionHistoryReflectionPrompts(
+      {
+        document: {
+          open: () => calls.push("open"),
+          write: (html) => {
+            calls.push("write");
+            writes.push(html);
+          },
+          close: () => calls.push("close"),
+        },
+        focus: () => calls.push("focus"),
+        print: () => calls.push("print"),
+      },
+      [
+        {
+          id: "session-a",
+          createdAt: "2026-05-15T09:05:00.000Z",
+          title: "Share round",
+          content: "# Snapshot two",
+          tags: ["Class 4A"],
+          archiveLabel: "event",
+        },
+      ],
+    );
+
+    expect(calls).toEqual(["open", "write", "close", "focus", "print"]);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain("<!doctype html>");
+    expect(writes[0]).toContain("Story Dice Lab facilitator reflection prompts");
   });
 });

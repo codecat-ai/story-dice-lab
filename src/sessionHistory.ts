@@ -68,6 +68,7 @@ const maxSessionHistoryTagLength = 32;
 const sessionHistoryExportSchema = "story-dice-lab.session-history";
 const sessionHistoryExportVersion = 1;
 const printableSessionHistoryContentLimit = 2200;
+const reflectionPromptExcerptLimit = 220;
 const unavailableWarning = "Local session history is unavailable in this browser.";
 const unreadableWarning = "Session history could not be read, so it was reset.";
 const invalidJsonWarning = "History import must be valid JSON.";
@@ -328,8 +329,140 @@ export function formatPrintableSessionHistoryBatchHtml(items: SessionHistoryItem
 </html>`;
 }
 
+export function formatSessionHistoryReflectionPrompts(items: SessionHistoryItem[]): string {
+  const recordLines =
+    items.length > 0
+      ? items.flatMap((item, index) => [
+          `${index + 1}. ${item.title}`,
+          `   Date: ${item.createdAt}`,
+          `   Tags: ${item.tags.length > 0 ? item.tags.join(", ") : "No tags"}`,
+          `   Archive: ${formatArchiveLabel(item.archiveLabel)}`,
+          `   Theme/excerpt: ${formatReflectionPromptExcerpt(item.content)}`,
+        ])
+      : [
+          "No visible saved session snapshots yet.",
+          "Use this blank reflection sheet after saving or importing session history.",
+        ];
+
+  return [
+    "Story Dice Lab facilitator reflection prompts",
+    `Visible saved records: ${items.length}`,
+    "",
+    "Prior-session context",
+    ...recordLines,
+    "",
+    "What worked last time?",
+    "- Which prompt, dice result, routine, or peer move created the most useful writing energy?",
+    "- What evidence from the saved records should be repeated?",
+    "",
+    "What should we revisit?",
+    "- Which story element, draft habit, or facilitation move needs another pass?",
+    "- Which record should be opened first if the group needs a reminder?",
+    "",
+    "Next-session goal",
+    "- Set one small goal for the next workshop.",
+    "- Name the first observable success signal.",
+    "",
+    "First 10 minutes",
+    "- Start with the saved record that best connects to the next goal.",
+    "- Ask participants to name one detail to keep and one choice to revise.",
+  ].join("\n");
+}
+
+export function formatPrintableSessionHistoryReflectionPromptsHtml(items: SessionHistoryItem[]): string {
+  const records =
+    items.length > 0
+      ? `<section class="reflection-records" aria-label="Visible saved snapshot context">
+        ${items.map(formatPrintableReflectionPromptRecord).join("")}
+      </section>`
+      : `<section class="reflection-empty" aria-label="No visible saved snapshots">
+        <h2>No visible saved session snapshots</h2>
+        <p>Use this blank reflection sheet after saving or importing session history.</p>
+      </section>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Story Dice Lab facilitator reflection prompts</title>
+  <style>
+    body { margin: 0; color: #16120d; font: 10pt/1.38 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .reflection-print { padding: 0.35in; }
+    h1 { margin: 0 0 0.08in; font-size: 18pt; }
+    h2 { margin: 0 0 0.06in; font-size: 12pt; }
+    h3 { margin: 0; font-size: 11pt; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.04in 0.12in; margin: 0 0 0.16in; }
+    dt { font-weight: 800; }
+    dd { margin: 0; }
+    .reflection-record { break-inside: avoid; border-top: 1px solid #c8beb1; padding: 0.1in 0 0.12in; }
+    .reflection-meta { display: flex; flex-wrap: wrap; gap: 0.06in 0.14in; margin: 0.03in 0 0.06in; color: #554b40; }
+    .reflection-prompts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.14in; border-top: 2px solid #16120d; padding-top: 0.14in; }
+    .reflection-prompt { break-inside: avoid; border: 1px solid #c8beb1; padding: 0.1in; min-height: 0.85in; }
+    .reflection-empty { border-top: 1px solid #c8beb1; padding-top: 0.14in; }
+    p { margin: 0 0 0.06in; }
+    ul { margin: 0; padding-left: 0.18in; }
+  </style>
+</head>
+<body>
+  <article class="reflection-print" aria-label="Printable facilitator reflection prompts">
+    <h1>Story Dice Lab facilitator reflection prompts</h1>
+    <dl>
+      <dt>Visible records</dt><dd>${items.length}</dd>
+      <dt>Scope</dt><dd>${escapeHtml(
+        `${items.length} visible saved snapshot${items.length === 1 ? "" : "s"} from the current filtered saved-history view`,
+      )}</dd>
+    </dl>
+    ${records}
+    <section class="reflection-prompts" aria-label="Next-session planning prompts">
+      <section class="reflection-prompt">
+        <h2>What worked last time?</h2>
+        <ul>
+          <li>Which prompt, routine, or peer move created useful writing energy?</li>
+          <li>What evidence from the saved records should be repeated?</li>
+        </ul>
+      </section>
+      <section class="reflection-prompt">
+        <h2>What should we revisit?</h2>
+        <ul>
+          <li>Which story element, draft habit, or facilitation move needs another pass?</li>
+          <li>Which record should be opened first if the group needs a reminder?</li>
+        </ul>
+      </section>
+      <section class="reflection-prompt">
+        <h2>Next-session goal</h2>
+        <ul>
+          <li>Set one small goal for the next workshop.</li>
+          <li>Name the first observable success signal.</li>
+        </ul>
+      </section>
+      <section class="reflection-prompt">
+        <h2>First 10 minutes</h2>
+        <ul>
+          <li>Start with the saved record that best connects to the next goal.</li>
+          <li>Ask participants to name one detail to keep and one choice to revise.</li>
+        </ul>
+      </section>
+    </section>
+  </article>
+</body>
+</html>`;
+}
+
 export function printSessionHistoryBatch(target: SessionHistoryPrintTarget, items: SessionHistoryItem[]): void {
   const html = formatPrintableSessionHistoryBatchHtml(items);
+  target.document.open();
+  target.document.write(html);
+  target.document.close();
+  target.focus?.();
+  target.print();
+}
+
+export function printSessionHistoryReflectionPrompts(
+  target: SessionHistoryPrintTarget,
+  items: SessionHistoryItem[],
+): void {
+  const html = formatPrintableSessionHistoryReflectionPromptsHtml(items);
   target.document.open();
   target.document.write(html);
   target.document.close();
@@ -397,9 +530,12 @@ export function formatSessionHistoryControls(
       <button id="copy-session-history" type="button">Copy history list</button>
       <button id="copy-session-history-json" type="button">Copy history JSON</button>
       <button id="print-visible-session-history" type="button" aria-describedby="session-history-print-help">Print visible history</button>
+      <button id="copy-session-history-reflection-prompts" type="button" aria-describedby="session-history-reflection-help">Copy reflection prompts</button>
+      <button id="print-session-history-reflection-prompts" type="button" aria-describedby="session-history-reflection-help">Print reflection prompts</button>
       <button id="clear-session-history" type="button">Clear history</button>
     </div>
     <p id="session-history-print-help">Prints only the saved snapshots visible after tag, archive-label, and search filters.</p>
+    <p id="session-history-reflection-help">Reflection prompts use only the currently visible saved-history set.</p>
     <label class="session-history-filter-label" for="session-history-tag-filter">Filter saved snapshots by tag</label>
     <select id="session-history-tag-filter">
       <option value="">All saved snapshots</option>
@@ -594,6 +730,38 @@ function boundPrintableSessionHistoryContent(content: string): { content: string
     content: content.slice(0, printableSessionHistoryContentLimit).trimEnd(),
     truncated: true,
   };
+}
+
+function formatPrintableReflectionPromptRecord(item: SessionHistoryItem): string {
+  const tags = item.tags.length > 0 ? item.tags.map(escapeHtml).join(", ") : "No tags";
+  return `<article class="reflection-record">
+          <h3>${escapeHtml(item.title)}</h3>
+          <p class="reflection-meta">
+            <time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(item.createdAt)}</time>
+            <span>Tags: ${tags}</span>
+            <span>Archive: ${escapeHtml(formatArchiveLabel(item.archiveLabel))}</span>
+          </p>
+          <p><strong>Theme/excerpt:</strong> ${escapeHtml(formatReflectionPromptExcerpt(item.content))}</p>
+        </article>`;
+}
+
+function formatReflectionPromptExcerpt(content: string): string {
+  const normalized = normalizeReflectionPromptContent(content);
+  if (normalized.length <= reflectionPromptExcerptLimit) return normalized || "No snapshot text saved.";
+
+  const bounded = normalized.slice(0, reflectionPromptExcerptLimit).trimEnd();
+  const lastSpace = bounded.lastIndexOf(" ");
+  const excerpt =
+    lastSpace >= Math.floor(reflectionPromptExcerptLimit * 0.72) ? bounded.slice(0, lastSpace).trimEnd() : bounded;
+  return `${excerpt}...`;
+}
+
+function normalizeReflectionPromptContent(content: string): string {
+  return content
+    .replace(/\[([^\]]+)\]\([^)\s]*(?:\([^)]*\))?[^)]*\)/g, "$1")
+    .replace(/[`*_~#-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function formatTagBadges(tags: string[]): string {
