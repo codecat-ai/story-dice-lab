@@ -88,14 +88,20 @@ export function listClassroomSessionTemplates(): ClassroomSessionTemplate[] {
   return classroomSessionTemplates.map(cloneTemplate);
 }
 
-export function findClassroomSessionTemplate(id: string): ClassroomSessionTemplate | null {
+export function findClassroomSessionTemplate(
+  id: string,
+  templates: ClassroomSessionTemplate[] = classroomSessionTemplates,
+): ClassroomSessionTemplate | null {
   const normalizedId = id.trim();
-  const template = classroomSessionTemplates.find((candidate) => candidate.id === normalizedId);
+  const template = templates.find((candidate) => candidate.id === normalizedId);
   return template ? cloneTemplate(template) : null;
 }
 
-export function applyClassroomSessionTemplate(id: string): AppliedClassroomSessionTemplate {
-  const template = findClassroomSessionTemplate(id);
+export function applyClassroomSessionTemplate(
+  id: string,
+  templates: ClassroomSessionTemplate[] = classroomSessionTemplates,
+): AppliedClassroomSessionTemplate {
+  const template = findClassroomSessionTemplate(id, templates);
   if (!template) {
     return {
       ok: false,

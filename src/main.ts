@@ -41,7 +41,14 @@ import {
   applyClassroomSessionTemplate,
   formatClassroomSessionTemplateControls,
   listClassroomSessionTemplates,
+  type ClassroomSessionTemplate,
 } from './classroomSessionTemplates';
+import {
+  exportTemplatePackJson,
+  formatTemplatePackControls,
+  parseTemplatePackJson,
+  type TemplatePackWordBankPreset,
+} from './templatePacks';
 import {
   deleteWordBankPreset,
   formatWordBankPresetControls,
@@ -81,9 +88,11 @@ seed = shared.seed;
 let currentWordBank: StoryDiceWordBank = defaultWordBank;
 let wordBankText = serializeWordBank(currentWordBank);
 let wordBankStatus = 'Using the built-in word bank.';
-const classroomSessionTemplates = listClassroomSessionTemplates();
+let classroomSessionTemplates: ClassroomSessionTemplate[] = listClassroomSessionTemplates();
 let selectedClassroomTemplateId = classroomSessionTemplates[0]?.id ?? '';
 let classroomTemplateStatus = 'Choose a classroom template to prefill seed, word bank, and agenda timing.';
+let templatePackImportText = '';
+let templatePackStatus = 'Copy the current local templates and presets, or paste a compatible template pack JSON.';
 let wordBankPresetName = '';
 let wordBankPresetNotes = '';
 let selectedWordBankPresetName = '';
@@ -130,6 +139,11 @@ function render(): void {
         ${formatClassroomSessionTemplateControls(classroomSessionTemplates, {
           selectedId: selectedClassroomTemplateId,
           statusMessage: classroomTemplateStatus,
+        })}
+        ${formatTemplatePackControls({
+          exportText: currentTemplatePackJson(),
+          importText: templatePackImportText,
+          statusMessage: templatePackStatus,
         })}
         ${formatExportActionControls()}
         ${snapshotControls()}
@@ -202,7 +216,7 @@ function render(): void {
     selectedClassroomTemplateId = (event.target as HTMLSelectElement).value;
   });
   document.querySelector<HTMLButtonElement>('#apply-template')?.addEventListener('click', () => {
-    const applied = applyClassroomSessionTemplate(selectedClassroomTemplateId);
+    const applied = applyClassroomSessionTemplate(selectedClassroomTemplateId, classroomSessionTemplates);
     classroomTemplateStatus = applied.statusMessage;
     if (applied.ok) {
       seed = applied.seed;
@@ -214,6 +228,33 @@ function render(): void {
       locked.clear();
       result = applied.result;
       wordBankStatus = 'Using the classroom template word bank.';
+    }
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-template-pack')?.addEventListener('click', async () => {
+    await copyText(currentTemplatePackJson());
+    templatePackStatus = `Copied a template pack with ${classroomSessionTemplates.length} template${classroomSessionTemplates.length === 1 ? '' : 's'} and ${wordBankPresets.length} word-bank preset${wordBankPresets.length === 1 ? '' : 's'}.`;
+    render();
+  });
+  document.querySelector<HTMLTextAreaElement>('#template-pack-import-json')?.addEventListener('input', (event) => {
+    templatePackImportText = (event.target as HTMLTextAreaElement).value;
+  });
+  document.querySelector<HTMLButtonElement>('#import-template-pack')?.addEventListener('click', () => {
+    const importResult = parseTemplatePackJson(templatePackImportText);
+    if (!importResult.ok) {
+      templatePackStatus = importResult.error;
+      render();
+      return;
+    }
+
+    const importedTemplates = importResult.pack.templates;
+    classroomSessionTemplates = mergeClassroomSessionTemplates(classroomSessionTemplates, importedTemplates);
+    if (importedTemplates.length > 0) selectedClassroomTemplateId = importedTemplates[0].id;
+    const savedPresetCount = saveImportedTemplatePackPresets(importResult.pack.wordBankPresets);
+    templatePackImportText = '';
+    templatePackStatus = `Imported "${importResult.pack.title}": ${importedTemplates.length} template${importedTemplates.length === 1 ? '' : 's'} available this session and ${savedPresetCount} word-bank preset${savedPresetCount === 1 ? '' : 's'} saved locally.`;
+    if (savedPresetCount < importResult.pack.wordBankPresets.length) {
+      templatePackStatus += ' Some presets could not be saved because local storage is unavailable.';
     }
     render();
   });
@@ -985,6 +1026,43 @@ function selectedSessionSnapshotArtifacts(
 function readWordBankPresets(): WordBankPreset[] {
   const storage = getWordBankPresetStorage();
   return storage ? listWordBankPresets(storage) : [];
+}
+
+function currentTemplatePackJson(): string {
+  return exportTemplatePackJson({
+    title: 'Story Dice Lab classroom template pack',
+    notes: 'Local classroom templates and saved word-bank presets from this browser.',
+    templates: classroomSessionTemplates,
+    wordBankPresets,
+  });
+}
+
+function mergeClassroomSessionTemplates(
+  existingTemplates: ClassroomSessionTemplate[],
+  importedTemplates: ClassroomSessionTemplate[],
+): ClassroomSessionTemplate[] {
+  const byId = new Map(existingTemplates.map((template) => [template.id, template]));
+  for (const template of importedTemplates) {
+    byId.set(template.id, template);
+  }
+  return [...byId.values()];
+}
+
+function saveImportedTemplatePackPresets(presets: TemplatePackWordBankPreset[]): number {
+  if (presets.length === 0) return 0;
+
+  const storage = getWordBankPresetStorage();
+  if (!storage) return 0;
+
+  let savedCount = 0;
+  for (const preset of presets) {
+    const saveResult = saveWordBankPreset(storage, preset.name, preset.wordBank, preset.notes);
+    if (saveResult.ok) savedCount += 1;
+  }
+
+  wordBankPresets = listWordBankPresets(storage);
+  selectedWordBankPresetName = wordBankPresets.find((preset) => preset.name === selectedWordBankPresetName)?.name ?? wordBankPresets[0]?.name ?? '';
+  return savedCount;
 }
 
 function refreshSessionHistory(): void {
