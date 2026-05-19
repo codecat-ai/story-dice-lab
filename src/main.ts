@@ -68,6 +68,11 @@ import {
   type SessionSnapshotOptions,
 } from './sessionSnapshot';
 import {
+  buildDemoWalkthrough,
+  formatDemoWalkthroughMarkdown,
+  formatDemoWalkthroughSection,
+} from './demoWalkthrough';
+import {
   clearSessionHistory,
   exportSessionHistoryJson,
   filterSessionHistory,
@@ -129,6 +134,8 @@ let sessionHistoryTagFilter = '';
 let sessionHistoryArchiveFilter: SessionHistoryArchiveLabel = '';
 let sessionHistorySearchQuery = '';
 let selectedSessionHistoryItemId = '';
+const demoWalkthrough = buildDemoWalkthrough();
+let demoWalkthroughStatus = 'Copy the demo pack, saved-history checkpoint, or complete walkthrough for offline practice.';
 refreshSessionHistory();
 
 function render(): void {
@@ -156,6 +163,8 @@ function render(): void {
           statusMessage: templatePackStatus,
           importedTemplateCount: importedClassroomTemplates.length,
         })}
+        ${formatDemoWalkthroughSection(demoWalkthrough)}
+        <p id="demo-walkthrough-status" class="status" aria-live="polite">${escapeHtml(demoWalkthroughStatus)}</p>
         ${formatExportActionControls()}
         ${snapshotControls()}
         ${formatSessionHistoryControls(
@@ -291,6 +300,21 @@ function render(): void {
       selectedClassroomTemplateId = classroomSessionTemplates[0]?.id ?? '';
     }
     templatePackStatus = clearResult.status;
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-demo-template-pack')?.addEventListener('click', async () => {
+    await copyText(demoWalkthrough.templatePackJson);
+    demoWalkthroughStatus = 'Copied the demo template pack JSON.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-demo-session-history')?.addEventListener('click', async () => {
+    await copyText(demoWalkthrough.sessionHistoryJson);
+    demoWalkthroughStatus = 'Copied the demo saved-history checkpoint JSON.';
+    render();
+  });
+  document.querySelector<HTMLButtonElement>('#copy-demo-walkthrough')?.addEventListener('click', async () => {
+    await copyText(formatDemoWalkthroughMarkdown(demoWalkthrough));
+    demoWalkthroughStatus = 'Copied the complete demo walkthrough.';
     render();
   });
   document.querySelector<HTMLButtonElement>('#roll-all')?.addEventListener('click', () => {
